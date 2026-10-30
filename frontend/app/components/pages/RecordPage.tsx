@@ -66,7 +66,7 @@ function ThisWeekPanel({
             onClick={onOpenWorkLog}
             className="text-xs font-semibold text-[#4B3FE0] hover:underline text-left mt-auto"
           >
-            Open this week's work log →
+            Open this week&apos;s work log →
           </button>
         </>
       ) : (
@@ -98,7 +98,6 @@ function RecordingRow({
     : null;
 
   const processing = recording.status !== "ready" && recording.status !== "failed";
-  const pendingCount = 0; // would need items API — shown as "Review" when ready
 
   return (
     <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between">

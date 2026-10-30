@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Item, Recording, SECTION_COLORS, SECTION_LABELS } from "../../types";
 import { ShimmerCard } from "../Shimmer";
 
@@ -149,31 +149,34 @@ export function ReviewPage({ token, onCountChange }: ReviewPageProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterSection>("all");
 
-  const fetchAll = useCallback(async () => {
-    const res = await fetch("/api/v1/recordings", { headers: authHeader }).then((r) => r.json()).catch(() => []);
-    const ready: Recording[] = (res as Recording[]).filter((r) => r.status === "ready");
-    setRecordings(ready);
-
-    const entries = await Promise.all(
-      ready.map(async (r) => {
-        const items: Item[] = await fetch(`/api/v1/recordings/${r.id}/items`, { headers: authHeader })
-          .then((res) => res.json())
-          .catch(() => []);
-        return [r.id, items] as [string, Item[]];
-      })
-    );
-
-    const map = Object.fromEntries(entries);
-    setItemsMap(map);
-
-    const pending = Object.values(map).flat().filter((i) => i.status === "pending").length;
-    onCountChange(pending);
-    setLoading(false);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
-
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+    let cancelled = false;
+    const auth = { Authorization: `Bearer ${token}` };
+    async function fetchAll() {
+      const res = await fetch("/api/v1/recordings", { headers: auth }).then((r) => r.json()).catch(() => []);
+      if (cancelled) return;
+      const ready: Recording[] = (res as Recording[]).filter((r) => r.status === "ready");
+      setRecordings(ready);
+
+      const entries = await Promise.all(
+        ready.map(async (r) => {
+          const items: Item[] = await fetch(`/api/v1/recordings/${r.id}/items`, { headers: auth })
+            .then((res) => res.json())
+            .catch(() => []);
+          return [r.id, items] as [string, Item[]];
+        })
+      );
+      if (cancelled) return;
+
+      const map = Object.fromEntries(entries);
+      setItemsMap(map);
+      const pending = Object.values(map).flat().filter((i) => i.status === "pending").length;
+      onCountChange(pending);
+      setLoading(false);
+    }
+    void fetchAll();
+    return () => { cancelled = true; };
+  }, [token, onCountChange]);
 
   const allItems = recordings.flatMap((r) => (itemsMap[r.id] ?? []).map((item) => ({ item, recordingId: r.id })));
 

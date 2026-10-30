@@ -1,9 +1,11 @@
 import os
+import uuid
 from collections.abc import Generator
 
 import pytest
 from blurt_core.config import settings
-from blurt_core.db.models import Base
+from blurt_core.db.models import Base, User
+from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -62,3 +64,31 @@ def _patch_api_db(monkeypatch: pytest.MonkeyPatch, test_engine: Engine) -> None:
     monkeypatch.setattr(auth_router_mod, "get_session", _test_get_session)
     monkeypatch.setattr(items_mod, "get_session", _test_get_session)
     monkeypatch.setattr(summaries_mod, "get_session", _test_get_session)
+
+
+# Fixed test user ID (matches seed migration for legacy tests)
+TEST_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+def _ensure_test_user(session: Session) -> None:
+    if not session.get(User, TEST_USER_ID):
+        session.add(User(id=TEST_USER_ID, email="test@blurt.dev", password_hash="x"))
+        session.commit()
+
+
+@pytest.fixture()
+def auth_headers(db_session: Session) -> dict[str, str]:
+    """Return Authorization headers for the fixed test user."""
+    from blurt_api.auth import create_access_token
+
+    _ensure_test_user(db_session)
+    token = create_access_token(TEST_USER_ID)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture()
+def api_client(auth_headers: dict[str, str]) -> TestClient:
+    """TestClient pre-configured with auth headers."""
+    from blurt_api.main import app
+
+    return TestClient(app, headers=auth_headers)

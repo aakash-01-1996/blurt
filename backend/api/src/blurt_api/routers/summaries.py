@@ -9,10 +9,9 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
-router = APIRouter(prefix="/api/v1", tags=["summaries"])
+from blurt_api.auth import CurrentUserId
 
-# Hardcoded until auth is implemented (M10)
-_DEV_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+router = APIRouter(prefix="/api/v1", tags=["summaries"])
 
 
 def _current_week_start() -> datetime:
@@ -32,12 +31,12 @@ class SummaryOut(BaseModel):
 
 
 @router.get("/summaries", response_model=list[SummaryOut])
-def list_summaries() -> list[WeeklySummary]:
+def list_summaries(user_id: CurrentUserId) -> list[WeeklySummary]:
     with get_session() as session:
         summaries = list(
             session.execute(
                 select(WeeklySummary)
-                .where(WeeklySummary.user_id == _DEV_USER_ID)
+                .where(WeeklySummary.user_id == user_id)
                 .order_by(WeeklySummary.week_start.desc())
                 .limit(12)
             ).scalars()
@@ -51,13 +50,13 @@ def list_summaries() -> list[WeeklySummary]:
     status_code=status.HTTP_202_ACCEPTED,
     response_model=dict[str, str],
 )
-def generate_summary() -> dict[str, str]:
+def generate_summary(user_id: CurrentUserId) -> dict[str, str]:
     week_start = _current_week_start()
 
     with get_session() as session:
         existing = session.execute(
             select(WeeklySummary).where(
-                WeeklySummary.user_id == _DEV_USER_ID,
+                WeeklySummary.user_id == user_id,
                 WeeklySummary.week_start == week_start,
             )
         ).scalar_one_or_none()
@@ -71,7 +70,7 @@ def generate_summary() -> dict[str, str]:
         enqueue(
             session,
             "summarize",
-            {"user_id": str(_DEV_USER_ID), "week_start": week_start.isoformat()},
+            {"user_id": str(user_id), "week_start": week_start.isoformat()},
         )
 
     return {"status": "queued", "week_start": week_start.isoformat()}
@@ -82,14 +81,14 @@ def generate_summary() -> dict[str, str]:
     status_code=status.HTTP_202_ACCEPTED,
     response_model=dict[str, str],
 )
-def regenerate_summary() -> dict[str, str]:
+def regenerate_summary(user_id: CurrentUserId) -> dict[str, str]:
     week_start = _current_week_start()
 
     with get_session() as session:
         enqueue(
             session,
             "summarize",
-            {"user_id": str(_DEV_USER_ID), "week_start": week_start.isoformat()},
+            {"user_id": str(user_id), "week_start": week_start.isoformat()},
         )
 
     return {"status": "queued", "week_start": week_start.isoformat()}
@@ -110,13 +109,12 @@ def _format_text(summary: WeeklySummary) -> str:
 @router.get("/summaries/{summary_id}/export", response_class=PlainTextResponse)
 def export_summary(
     summary_id: uuid.UUID,
+    user_id: CurrentUserId,
     format: str = Query(default="md", pattern="^(md|txt)$"),
 ) -> PlainTextResponse:
     with get_session() as session:
         summary = session.get(WeeklySummary, summary_id)
-        if summary is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Summary not found")
-        if summary.user_id != _DEV_USER_ID:
+        if summary is None or summary.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Summary not found")
 
         if format == "txt":

@@ -2,7 +2,6 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from blurt_api.main import app
 from blurt_core.db.models import (
     Item,
     ItemStatus,
@@ -14,8 +13,6 @@ from blurt_core.db.models import (
 )
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-
-client = TestClient(app)
 
 USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
@@ -81,20 +78,20 @@ def _seed_summary(session: Session, lines: list[str] | None = None) -> uuid.UUID
 # ── GET /summaries ────────────────────────────────────────────────────────────
 
 
-def test_list_summaries_empty(db_session: Session) -> None:
+def test_list_summaries_empty(api_client: TestClient, db_session: Session) -> None:
     _ensure_user(db_session)
     db_session.commit()
 
-    r = client.get("/api/v1/summaries")
+    r = api_client.get("/api/v1/summaries")
     assert r.status_code == 200
     assert r.json() == []
 
 
-def test_list_summaries_returns_existing(db_session: Session) -> None:
+def test_list_summaries_returns_existing(api_client: TestClient, db_session: Session) -> None:
     _seed_summary(db_session)
     db_session.commit()
 
-    r = client.get("/api/v1/summaries")
+    r = api_client.get("/api/v1/summaries")
     assert r.status_code == 200
     data = r.json()
     assert len(data) >= 1
@@ -112,7 +109,7 @@ def _clear_current_week_summary(session: Session) -> None:
     session.commit()
 
 
-def test_generate_summary_queues_job(db_session: Session) -> None:
+def test_generate_summary_queues_job(api_client: TestClient, db_session: Session) -> None:
     import json
 
     from blurt_core.db.models import Job
@@ -120,7 +117,7 @@ def test_generate_summary_queues_job(db_session: Session) -> None:
     _ensure_user(db_session)
     _clear_current_week_summary(db_session)
 
-    r = client.post("/api/v1/summaries/generate")
+    r = api_client.post("/api/v1/summaries/generate")
     assert r.status_code == 202
     assert r.json()["status"] == "queued"
 
@@ -136,23 +133,25 @@ def test_generate_summary_queues_job(db_session: Session) -> None:
     assert payload["user_id"] == str(USER_ID)
 
 
-def test_generate_summary_409_if_already_exists(db_session: Session) -> None:
+def test_generate_summary_409_if_already_exists(
+    api_client: TestClient, db_session: Session
+) -> None:
     _clear_current_week_summary(db_session)
     _seed_summary(db_session)
     db_session.commit()
 
-    r = client.post("/api/v1/summaries/generate")
+    r = api_client.post("/api/v1/summaries/generate")
     assert r.status_code == 409
 
 
 # ── POST /summaries/regenerate ────────────────────────────────────────────────
 
 
-def test_regenerate_always_queues(db_session: Session) -> None:
+def test_regenerate_always_queues(api_client: TestClient, db_session: Session) -> None:
     _seed_summary(db_session)
     db_session.commit()
 
-    r = client.post("/api/v1/summaries/regenerate")
+    r = api_client.post("/api/v1/summaries/regenerate")
     assert r.status_code == 202
     assert r.json()["status"] == "queued"
 
@@ -160,11 +159,11 @@ def test_regenerate_always_queues(db_session: Session) -> None:
 # ── GET /summaries/{id}/export ────────────────────────────────────────────────
 
 
-def test_export_markdown(db_session: Session) -> None:
+def test_export_markdown(api_client: TestClient, db_session: Session) -> None:
     summary_id = _seed_summary(db_session)
     db_session.commit()
 
-    r = client.get(f"/api/v1/summaries/{summary_id}/export?format=md")
+    r = api_client.get(f"/api/v1/summaries/{summary_id}/export?format=md")
     assert r.status_code == 200
     assert "text/markdown" in r.headers["content-type"]
     assert r.headers["content-disposition"].startswith("attachment")
@@ -174,11 +173,11 @@ def test_export_markdown(db_session: Session) -> None:
     assert "- Fixed pipeline bug" in body
 
 
-def test_export_plain_text(db_session: Session) -> None:
+def test_export_plain_text(api_client: TestClient, db_session: Session) -> None:
     summary_id = _seed_summary(db_session)
     db_session.commit()
 
-    r = client.get(f"/api/v1/summaries/{summary_id}/export?format=txt")
+    r = api_client.get(f"/api/v1/summaries/{summary_id}/export?format=txt")
     assert r.status_code == 200
     assert "text/plain" in r.headers["content-type"]
     body = r.text
@@ -186,25 +185,25 @@ def test_export_plain_text(db_session: Session) -> None:
     assert "• Shipped auth refactor" in body
 
 
-def test_export_default_format_is_markdown(db_session: Session) -> None:
+def test_export_default_format_is_markdown(api_client: TestClient, db_session: Session) -> None:
     summary_id = _seed_summary(db_session)
     db_session.commit()
 
-    r = client.get(f"/api/v1/summaries/{summary_id}/export")
+    r = api_client.get(f"/api/v1/summaries/{summary_id}/export")
     assert r.status_code == 200
     assert "text/markdown" in r.headers["content-type"]
 
 
-def test_export_invalid_format(db_session: Session) -> None:
+def test_export_invalid_format(api_client: TestClient, db_session: Session) -> None:
     summary_id = _seed_summary(db_session)
     db_session.commit()
 
-    r = client.get(f"/api/v1/summaries/{summary_id}/export?format=pdf")
+    r = api_client.get(f"/api/v1/summaries/{summary_id}/export?format=pdf")
     assert r.status_code == 422
 
 
-def test_export_404_for_unknown_summary() -> None:
-    r = client.get(f"/api/v1/summaries/{uuid.uuid4()}/export")
+def test_export_404_for_unknown_summary(api_client: TestClient) -> None:
+    r = api_client.get(f"/api/v1/summaries/{uuid.uuid4()}/export")
     assert r.status_code == 404
 
 
@@ -212,7 +211,9 @@ def test_export_404_for_unknown_summary() -> None:
 
 
 @pytest.mark.parametrize("section", ["task", "note"])
-def test_approve_non_work_log_does_not_create_entry(db_session: Session, section: str) -> None:
+def test_approve_non_work_log_does_not_create_entry(
+    api_client: TestClient, db_session: Session, section: str
+) -> None:
     recording_id = _seed_recording(db_session)
     item = Item(
         recording_id=recording_id,
@@ -224,14 +225,14 @@ def test_approve_non_work_log_does_not_create_entry(db_session: Session, section
     db_session.add(item)
     db_session.commit()
 
-    client.post(f"/api/v1/items/{item.id}/review", json={"action": "approve"})
+    api_client.post(f"/api/v1/items/{item.id}/review", json={"action": "approve"})
 
     db_session.expire_all()
     count = db_session.query(WorkLogEntry).filter(WorkLogEntry.item_id == item.id).count()
     assert count == 0
 
 
-def test_approve_work_log_creates_entry(db_session: Session) -> None:
+def test_approve_work_log_creates_entry(api_client: TestClient, db_session: Session) -> None:
     recording_id = _seed_recording(db_session)
     item = Item(
         recording_id=recording_id,
@@ -243,7 +244,7 @@ def test_approve_work_log_creates_entry(db_session: Session) -> None:
     db_session.add(item)
     db_session.commit()
 
-    r = client.post(f"/api/v1/items/{item.id}/review", json={"action": "approve"})
+    r = api_client.post(f"/api/v1/items/{item.id}/review", json={"action": "approve"})
     assert r.status_code == 200
 
     db_session.expire_all()

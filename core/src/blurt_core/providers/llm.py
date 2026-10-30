@@ -1,6 +1,7 @@
 import logging
 import time
 import uuid
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -17,7 +18,7 @@ class LlmClient:
 
     def chat(
         self,
-        messages: list[dict[str, str]],
+        messages: list[Any],
         *,
         session: Session,
         job_id: uuid.UUID | None,

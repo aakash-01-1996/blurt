@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+dist/
+
+# Node
+node_modules/
+.next/
+frontend/.next/
+
+# Env / secrets
+.env
+.envrc
+*.env
+
+# Data (audio is never committed)
+data/
+
+# Eval audio
+*.aiff
+*.flac
+*.webm
+*.mp3
+*.wav
+
+# OS
+.DS_Store
+
+# Project docs (local only, not for the repo)
+PLAN.md
+CLAUDE.md
+*.pdf

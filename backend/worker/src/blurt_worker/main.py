@@ -10,7 +10,10 @@ from blurt_core.db.session import get_session
 from blurt_core.logging import configure_logging
 from blurt_core.queue import claim, complete, fail, recover_stuck
 
+from blurt_worker.handlers.extract import handle_extract
 from blurt_worker.handlers.normalize import handle_normalize
+from blurt_worker.handlers.route import handle_route
+from blurt_worker.handlers.split import handle_split
 from blurt_worker.handlers.transcribe import handle_transcribe
 
 configure_logging()
@@ -22,6 +25,9 @@ _WORKER_ID = f"worker-{__name__}"
 _handlers: dict[str, Callable[[Job], None]] = {
     "normalize": handle_normalize,
     "transcribe": handle_transcribe,
+    "split": handle_split,
+    "route": handle_route,
+    "extract": handle_extract,
 }
 
 # Restrict to specific job kinds if HANDLED_KINDS is set (e.g. "normalize,transcribe")

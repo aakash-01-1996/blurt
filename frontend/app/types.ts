@@ -44,6 +44,8 @@ export interface Item {
   followup_question: string | null;
 }
 
+export type Page = "record" | "review" | "work-log" | "tasks" | "settings";
+
 export const STATUS_COLORS: Record<RecordingStatus, string> = {
   uploaded: "bg-gray-100 text-gray-600",
   normalizing: "bg-blue-100 text-blue-700",

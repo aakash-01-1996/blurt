@@ -8,6 +8,7 @@ from blurt_core.queue import enqueue
 from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import select
 
 from blurt_api.deps import storage
 
@@ -82,8 +83,11 @@ async def upload_recording(file: UploadFile) -> Recording:
 @router.get("/recordings", response_model=list[RecordingListItem])
 def list_recordings() -> list[Recording]:
     with get_session() as session:
-        recordings = session.query(Recording).order_by(Recording.created_at.desc()).limit(20).all()
-        # Detach from session for Pydantic serialization
+        recordings = list(
+            session.execute(
+                select(Recording).order_by(Recording.created_at.desc()).limit(20)
+            ).scalars()
+        )
         session.expunge_all()
         return recordings
 

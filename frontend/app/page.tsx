@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type RecordingStatus =
   | "uploaded"
@@ -12,11 +12,23 @@ type RecordingStatus =
   | "ready"
   | "failed";
 
+type ItemStatus = "pending" | "approved" | "rejected";
+
 interface Recording {
   id: string;
   status: RecordingStatus;
   duration_s: number | null;
   created_at: string;
+}
+
+interface Item {
+  id: string;
+  section: string;
+  status: ItemStatus;
+  span_text: string;
+  route_confidence: number | null;
+  fields: Record<string, string> | null;
+  followup_question: string | null;
 }
 
 const STATUS_COLORS: Record<RecordingStatus, string> = {
@@ -30,27 +42,152 @@ const STATUS_COLORS: Record<RecordingStatus, string> = {
   failed: "bg-red-100 text-red-700",
 };
 
+const SECTION_LABELS: Record<string, string> = {
+  work_log: "Work Log",
+  task: "Task",
+  note: "Note",
+};
+
+const SECTION_COLORS: Record<string, string> = {
+  work_log: "bg-violet-100 text-violet-700",
+  task: "bg-amber-100 text-amber-700",
+  note: "bg-sky-100 text-sky-700",
+};
+
+function ItemCard({
+  item,
+  onReview,
+}: {
+  item: Item;
+  onReview: (id: string, action: "approve" | "reject") => void;
+}) {
+  const reviewed = item.status !== "pending";
+
+  return (
+    <div
+      className={`rounded-xl border p-4 flex flex-col gap-3 transition-opacity ${
+        reviewed ? "opacity-60" : "bg-white border-gray-200"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+            SECTION_COLORS[item.section] ?? "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {SECTION_LABELS[item.section] ?? item.section}
+        </span>
+        {reviewed && (
+          <span
+            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+              item.status === "approved"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {item.status}
+          </span>
+        )}
+      </div>
+
+      <p className="text-sm text-gray-500 italic">&ldquo;{item.span_text}&rdquo;</p>
+
+      {item.fields && Object.keys(item.fields).length > 0 && (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          {Object.entries(item.fields).map(([k, v]) => (
+            <>
+              <dt key={`k-${k}`} className="text-gray-400 font-medium capitalize">
+                {k.replace(/_/g, " ")}
+              </dt>
+              <dd key={`v-${k}`} className="text-gray-700">
+                {v}
+              </dd>
+            </>
+          ))}
+        </dl>
+      )}
+
+      {!reviewed && (
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => onReview(item.id, "approve")}
+            className="flex-1 text-sm font-semibold py-1.5 rounded-lg bg-[#4B3FE0] text-white hover:brightness-110 transition"
+          >
+            Approve
+          </button>
+          <button
+            onClick={() => onReview(item.id, "reject")}
+            className="flex-1 text-sm font-semibold py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+          >
+            Reject
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [itemsMap, setItemsMap] = useState<Record<string, Item[]>>({});
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Poll recordings every 2s
+  const fetchRecordings = useCallback(() => {
+    fetch("/api/v1/recordings")
+      .then((r) => r.json())
+      .then(setRecordings)
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
-    const fetchRecordings = () => {
-      fetch("/api/v1/recordings")
-        .then((r) => r.json())
-        .then(setRecordings)
-        .catch(() => {});
-    };
     fetchRecordings();
     const id = setInterval(fetchRecordings, 2000);
     return () => clearInterval(id);
+  }, [fetchRecordings]);
+
+  const fetchItems = useCallback((recordingId: string) => {
+    fetch(`/api/v1/recordings/${recordingId}/items`)
+      .then((r) => r.json())
+      .then((items: Item[]) =>
+        setItemsMap((prev) => ({ ...prev, [recordingId]: items }))
+      )
+      .catch(() => {});
   }, []);
+
+  const toggleExpand = useCallback(
+    (r: Recording) => {
+      if (r.status !== "ready") return;
+      const next = expandedId === r.id ? null : r.id;
+      setExpandedId(next);
+      if (next) fetchItems(next);
+    },
+    [expandedId, fetchItems]
+  );
+
+  const handleReview = useCallback(
+    async (itemId: string, action: "approve" | "reject", recordingId: string) => {
+      const res = await fetch(`/api/v1/items/${itemId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) return;
+      const updated: Item = await res.json();
+      setItemsMap((prev) => ({
+        ...prev,
+        [recordingId]: (prev[recordingId] ?? []).map((i) =>
+          i.id === itemId ? updated : i
+        ),
+      }));
+    },
+    []
+  );
 
   async function startRecording() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -71,7 +208,7 @@ export default function Home() {
     if (!mediaRef.current) return;
     mediaRef.current.stop();
     mediaRef.current.stream.getTracks().forEach((t) => t.stop());
-    timerRef.current && clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
 
     await new Promise<void>((resolve) => {
       mediaRef.current!.onstop = () => resolve();
@@ -132,20 +269,52 @@ export default function Home() {
       {recordings.length === 0 ? (
         <p className="text-[#5C5F6A] text-sm">No recordings yet.</p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3">
           {recordings.map((r) => (
-            <li
-              key={r.id}
-              className="bg-white rounded-2xl p-4 flex items-center justify-between"
-            >
-              <span className="text-xs text-[#5C5F6A] font-mono">
-                {r.duration_s ? `${r.duration_s.toFixed(1)}s` : "\u2014"}
-              </span>
-              <span
-                className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[r.status]}`}
+            <li key={r.id} className="flex flex-col gap-2">
+              {/* Recording row */}
+              <button
+                onClick={() => toggleExpand(r)}
+                disabled={r.status !== "ready"}
+                className={`bg-white rounded-2xl p-4 flex items-center justify-between w-full text-left transition ${
+                  r.status === "ready"
+                    ? "hover:shadow-sm cursor-pointer"
+                    : "cursor-default"
+                }`}
               >
-                {r.status}
-              </span>
+                <span className="text-xs text-[#5C5F6A] font-mono">
+                  {r.duration_s ? `${r.duration_s.toFixed(1)}s` : "\u2014"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[r.status]}`}
+                  >
+                    {r.status}
+                  </span>
+                  {r.status === "ready" && (
+                    <span className="text-xs text-gray-400">
+                      {expandedId === r.id ? "▲" : "▼"}
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              {/* Items panel */}
+              {expandedId === r.id && (
+                <div className="flex flex-col gap-2 pl-2">
+                  {(itemsMap[r.id] ?? []).length === 0 ? (
+                    <p className="text-sm text-gray-400 px-2">No items extracted.</p>
+                  ) : (
+                    (itemsMap[r.id] ?? []).map((item) => (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        onReview={(id, action) => handleReview(id, action, r.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>

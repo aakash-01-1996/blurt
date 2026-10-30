@@ -34,3 +34,6 @@ data/
 PLAN.md
 CLAUDE.md
 *.pdf
+
+# Claude Code local settings
+.claude/settings.local.json

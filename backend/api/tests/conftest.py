@@ -38,6 +38,7 @@ def _patch_api_db(monkeypatch: pytest.MonkeyPatch, test_engine: Engine) -> None:
     from contextlib import contextmanager
 
     import blurt_api.routers.items as items_mod
+    import blurt_api.routers.summaries as summaries_mod
     import blurt_core.db.session as session_mod
 
     TestSession = sessionmaker(bind=test_engine, autoflush=False, autocommit=False)
@@ -56,3 +57,4 @@ def _patch_api_db(monkeypatch: pytest.MonkeyPatch, test_engine: Engine) -> None:
 
     monkeypatch.setattr(session_mod, "get_session", _test_get_session)
     monkeypatch.setattr(items_mod, "get_session", _test_get_session)
+    monkeypatch.setattr(summaries_mod, "get_session", _test_get_session)

@@ -82,13 +82,14 @@ class GroqStt:
         )
 
         text: str = (transcription.text or "").strip()
+        raw_segments = getattr(transcription, "segments", None) or []
         segments = [
             Segment(
-                start=float(s.start),
-                end=float(s.end),
-                text=(s.text or "").strip(),
+                start=float(s["start"]),
+                end=float(s["end"]),
+                text=(s["text"] or "").strip(),
             )
-            for s in (transcription.segments or [])
+            for s in raw_segments
         ]
         return text, segments
 

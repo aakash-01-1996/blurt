@@ -2,13 +2,27 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
     pass
+
+
+# ── Enums ────────────────────────────────────────────────────────────────────
 
 
 class RecordingStatus(enum.StrEnum):
@@ -22,18 +36,46 @@ class RecordingStatus(enum.StrEnum):
     failed = "failed"
 
 
-class JobStatus(enum.StrEnum):
+class ItemStatus(enum.StrEnum):
     pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
+class JobStatus(enum.StrEnum):
+    queued = "queued"
     running = "running"
-    done = "done"
+    completed = "completed"
     failed = "failed"
+
+
+class CorrectionKind(enum.StrEnum):
+    field_edit = "field_edit"
+    reroute = "reroute"
+    reject = "reject"
+
+
+# ── Models ───────────────────────────────────────────────────────────────────
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    recordings: Mapped[list["Recording"]] = relationship(back_populates="user")
+    work_log_entries: Mapped[list["WorkLogEntry"]] = relationship(back_populates="user")
+    weekly_summaries: Mapped[list["WeeklySummary"]] = relationship(back_populates="user")
 
 
 class Recording(Base):
     __tablename__ = "recordings"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
     mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
     duration_s: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -41,28 +83,147 @@ class Recording(Base):
         Enum(RecordingStatus), nullable=False, default=RecordingStatus.uploaded
     )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    jobs: Mapped[list["Job"]] = relationship("Job", back_populates="recording")
+    user: Mapped["User"] = relationship(back_populates="recordings")
+    transcript: Mapped["Transcript | None"] = relationship(
+        back_populates="recording", uselist=False
+    )
+    items: Mapped[list["Item"]] = relationship(back_populates="recording")
+
+    __table_args__ = (Index("ix_recordings_user_id", "user_id"),)
+
+
+class Transcript(Base):
+    __tablename__ = "transcripts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    recording_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recordings.id"), nullable=False, unique=True
+    )
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    segments: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)  # type: ignore[type-arg]
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    recording: Mapped["Recording"] = relationship(back_populates="transcript")
+
+
+class Item(Base):
+    __tablename__ = "items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    recording_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recordings.id"), nullable=False)
+    section: Mapped[str] = mapped_column(String(64), nullable=False)
+    route_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    status: Mapped[ItemStatus] = mapped_column(
+        Enum(ItemStatus), nullable=False, default=ItemStatus.pending
+    )
+    span_text: Mapped[str] = mapped_column(Text, nullable=False)
+    span_start_char: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    span_end_char: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    start_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    end_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fields: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # type: ignore[type-arg]
+    followup_question: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    recording: Mapped["Recording"] = relationship(back_populates="items")
+    work_log_entry: Mapped["WorkLogEntry | None"] = relationship(
+        back_populates="item", uselist=False
+    )
+    corrections: Mapped[list["Correction"]] = relationship(back_populates="item")
+
+    __table_args__ = (Index("ix_items_recording_id", "recording_id"),)
+
+
+class WorkLogEntry(Base):
+    __tablename__ = "work_log_entries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.id"), nullable=False, unique=True)
+    accomplishment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    impact: Mapped[str | None] = mapped_column(Text, nullable=True)
+    project: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    occurred_on: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="work_log_entries")
+    item: Mapped["Item"] = relationship(back_populates="work_log_entry")
+
+
+class Correction(Base):
+    __tablename__ = "corrections"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.id"), nullable=False)
+    kind: Mapped[CorrectionKind] = mapped_column(Enum(CorrectionKind), nullable=False)
+    before: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # type: ignore[type-arg]
+    after: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # type: ignore[type-arg]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    item: Mapped["Item"] = relationship(back_populates="corrections")
+
+    __table_args__ = (Index("ix_corrections_item_id", "item_id"),)
 
 
 class Job(Base):
     __tablename__ = "jobs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    recording_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("recordings.id"), nullable=True
-    )
-    job_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)  # type: ignore[type-arg]
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus), nullable=False, default=JobStatus.pending
+        Enum(JobStatus), nullable=False, default=JobStatus.queued
     )
-    payload: Mapped[dict] = mapped_column(Text, nullable=False, default="{}")  # type: ignore[type-arg]
-    error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    run_after: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    locked_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    recording: Mapped["Recording | None"] = relationship("Recording", back_populates="jobs")
+    llm_calls: Mapped[list["LlmCall"]] = relationship(back_populates="job")
+
+    __table_args__ = (Index("ix_jobs_status_run_after", "status", "run_after"),)
+
+
+class LlmCall(Base):
+    __tablename__ = "llm_calls"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id"), nullable=True)
+    stage: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ok: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    job: Mapped["Job | None"] = relationship(back_populates="llm_calls")
+
+    __table_args__ = (Index("ix_llm_calls_job_id", "job_id"),)
+
+
+class WeeklySummary(Base):
+    __tablename__ = "weekly_summaries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    week_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    lines: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)  # type: ignore[type-arg]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="weekly_summaries")
+
+    __table_args__ = (Index("ix_weekly_summaries_user_week", "user_id", "week_start"),)

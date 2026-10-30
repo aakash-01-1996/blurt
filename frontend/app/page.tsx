@@ -30,6 +30,16 @@ interface Summary {
   created_at: string;
 }
 
+interface WorkLogEntry {
+  id: string;
+  item_id: string;
+  accomplishment: string | null;
+  impact: string | null;
+  project: string | null;
+  occurred_on: string | null;
+  created_at: string;
+}
+
 type RecordingStatus =
   | "uploaded"
   | "normalizing"
@@ -280,6 +290,8 @@ function AppShell({ token, onLogout }: { token: string; onLogout: () => void }) 
   const [itemsMap, setItemsMap] = useState<Record<string, Item[]>>({});
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [activeTab, setActiveTab] = useState<"blurts" | "work-log">("blurts");
+  const [workLog, setWorkLog] = useState<WorkLogEntry[]>([]);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -319,6 +331,17 @@ function AppShell({ token, onLogout }: { token: string; onLogout: () => void }) 
   useEffect(() => {
     fetchSummaries();
   }, [fetchSummaries]);
+
+  const fetchWorkLog = useCallback(() => {
+    fetch("/api/v1/work-log", { headers: authHeader })
+      .then((r) => r.json())
+      .then(setWorkLog)
+      .catch(() => {});
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (activeTab === "work-log") fetchWorkLog();
+  }, [activeTab, fetchWorkLog]);
 
   const handleGenerateSummary = useCallback(async () => {
     setGeneratingSummary(true);
@@ -456,6 +479,69 @@ function AppShell({ token, onLogout }: { token: string; onLogout: () => void }) 
         </button>
       </div>
 
+      {/* Tab navigation */}
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-8">
+        {(["blurts", "work-log"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 text-sm font-semibold py-1.5 rounded-md transition ${
+              activeTab === tab
+                ? "bg-white text-[#15161A] shadow-sm"
+                : "text-[#5C5F6A]"
+            }`}
+          >
+            {tab === "blurts" ? "Blurts" : "Work Log"}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "work-log" && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-[#5C5F6A] uppercase tracking-wide">
+              Work Log
+            </h2>
+            <button
+              onClick={fetchWorkLog}
+              className="text-xs text-gray-400 hover:text-gray-600 transition"
+            >
+              Refresh
+            </button>
+          </div>
+          {workLog.length === 0 ? (
+            <p className="text-[#5C5F6A] text-sm">No entries yet. Approve work log items to populate this view.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {workLog.map((entry) => (
+                <li key={entry.id} className="bg-white rounded-2xl p-4 flex flex-col gap-1">
+                  {entry.accomplishment && (
+                    <p className="text-sm text-gray-800 font-medium">{entry.accomplishment}</p>
+                  )}
+                  {entry.impact && (
+                    <p className="text-sm text-gray-500">{entry.impact}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-1">
+                    {entry.project && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
+                        {entry.project}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400 font-mono">
+                      {entry.occurred_on
+                        ? new Date(entry.occurred_on).toLocaleDateString()
+                        : new Date(entry.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {activeTab === "blurts" && (
+        <>
       {/* Record button */}
       <div className="flex flex-col items-center gap-4 mb-10">
         <button
@@ -559,6 +645,8 @@ function AppShell({ token, onLogout }: { token: string; onLogout: () => void }) 
             <SummaryCard key={s.id} summary={s} />
           ))}
         </div>
+      )}
+        </>
       )}
     </main>
   );

@@ -1,0 +1,90 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: blurt-api:dev
+    newTag: dev
+  - name: blurt-worker:dev
+    newTag: dev
+  - name: blurt-frontend:dev
+    newTag: dev
+
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: api
+        namespace: blurt
+      spec:
+        template:
+          spec:
+            containers:
+              - name: api
+                imagePullPolicy: IfNotPresent
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 96Mi
+                  limits:
+                    cpu: 250m
+                    memory: 192Mi
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: worker
+        namespace: blurt
+      spec:
+        template:
+          spec:
+            containers:
+              - name: worker
+                imagePullPolicy: IfNotPresent
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 128Mi
+                  limits:
+                    cpu: 500m
+                    memory: 256Mi
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: frontend
+        namespace: blurt
+      spec:
+        template:
+          spec:
+            containers:
+              - name: frontend
+                imagePullPolicy: IfNotPresent
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 96Mi
+                  limits:
+                    cpu: 250m
+                    memory: 192Mi
+  - patch: |-
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: postgres
+        namespace: blurt
+      spec:
+        template:
+          spec:
+            containers:
+              - name: postgres
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 128Mi
+                  limits:
+                    cpu: 250m
+                    memory: 256Mi

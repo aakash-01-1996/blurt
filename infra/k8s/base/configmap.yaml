@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blurt-config
+  namespace: blurt
+data:
+  DATABASE_URL: "postgresql+psycopg://blurt:blurt@postgres:5432/blurt"
+  STORAGE_BACKEND: "s3"
+  AUDIO_DIR: "/data/audio"
+  STT_PROVIDER: "groq"
+  STT_MODEL: "whisper-large-v3-turbo"
+  LLM_BASE_URL: "https://api.groq.com/openai/v1"
+  LLM_MODEL: "llama-3.1-8b-instant"
+  ROUTER_CONFIDENCE_THRESHOLD: "0.7"
+  WORKER_CONCURRENCY: "1"
+  API_INTERNAL_URL: "http://api:8000"
+  AUDIO_RETENTION_DAYS: "14"
+  MAX_UPLOAD_MB: "25"
+  S3_BUCKET: "blurt-audio-dev"

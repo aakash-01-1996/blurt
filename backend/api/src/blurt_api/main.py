@@ -1,11 +1,32 @@
+import uuid
+from collections.abc import Awaitable, Callable
+
 from blurt_core.db.session import engine
-from fastapi import FastAPI
+from blurt_core.logging import configure_logging, request_id_var
+from fastapi import FastAPI, Request
+from fastapi.responses import Response
 from sqlalchemy import text
 
 from blurt_api.routers.recordings import router as recordings_router
 
+configure_logging()
+
 app = FastAPI(title="Blurt API")
 app.include_router(recordings_router)
+
+
+@app.middleware("http")
+async def request_id_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    rid = request.headers.get("x-request-id") or str(uuid.uuid4())
+    token = request_id_var.set(rid)
+    try:
+        response = await call_next(request)
+        response.headers["x-request-id"] = rid
+        return response
+    finally:
+        request_id_var.reset(token)
 
 
 @app.get("/health")

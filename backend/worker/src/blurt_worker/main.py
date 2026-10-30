@@ -4,10 +4,11 @@ import time
 from collections.abc import Callable
 
 from blurt_core.db.models import Job
+from blurt_core.logging import configure_logging
 
 from blurt_worker.handlers.normalize import handle_normalize
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+configure_logging()
 logger = logging.getLogger(__name__)
 
 _running = True

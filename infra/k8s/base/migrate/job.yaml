@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: blurt
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres 5432; do
+                echo "waiting for postgres..."; sleep 2;
+              done
+      containers:
+        - name: migrate
+          image: blurt-api:dev
+          command: ["python", "-m", "blurt_api.migrate"]
+          envFrom:
+            - configMapRef:
+                name: blurt-config
+            - secretRef:
+                name: blurt-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

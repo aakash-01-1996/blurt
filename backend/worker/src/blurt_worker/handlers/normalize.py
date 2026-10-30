@@ -5,6 +5,7 @@ from blurt_core.audio import AudioError, normalize
 from blurt_core.config import settings
 from blurt_core.db.models import Job, Recording, RecordingStatus
 from blurt_core.db.session import get_session
+from blurt_core.logging import job_id_var, recording_id_var
 from blurt_core.providers.storage import build_storage_provider
 from blurt_core.queue import enqueue
 
@@ -16,8 +17,10 @@ storage = build_storage_provider(settings)
 def handle_normalize(job: Job) -> None:
     import json
 
+    job_id_var.set(str(job.id))
     payload = json.loads(job.payload) if isinstance(job.payload, str) else job.payload
     recording_id = uuid.UUID(payload["recording_id"])
+    recording_id_var.set(str(recording_id))
 
     with get_session() as session:
         recording = session.get(Recording, recording_id)

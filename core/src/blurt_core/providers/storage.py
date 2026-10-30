@@ -13,11 +13,11 @@ class StorageProvider(Protocol):
 class LocalDiskStorage:
     def __init__(self, base_dir: str) -> None:
         self._base = Path(base_dir)
-        self._base.mkdir(parents=True, exist_ok=True)
 
     def put(self, key: str, data: bytes, content_type: str) -> None:
         path = self._base / key
         path.parent.mkdir(parents=True, exist_ok=True)
+        self._base.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
 
     def get(self, key: str) -> bytes:

@@ -90,9 +90,14 @@ def handle_split(job: Job) -> None:
             items.append(item)
         session.flush()
 
-        recording.status = RecordingStatus.routing
-        for item in items:
-            enqueue(session, "route", {"recording_id": str(recording_id), "item_id": str(item.id)})
+        if not items:
+            recording.status = RecordingStatus.ready
+        else:
+            recording.status = RecordingStatus.routing
+            for item in items:
+                enqueue(
+                    session, "route", {"recording_id": str(recording_id), "item_id": str(item.id)}
+                )
 
     logger.info(
         "split complete",

@@ -3,11 +3,12 @@ import logging
 import uuid
 
 from blurt_core.config import settings
-from blurt_core.db.models import Item, ItemStatus, Job
+from blurt_core.db.models import Item, ItemStatus, Job, Recording, RecordingStatus
 from blurt_core.db.session import get_session
 from blurt_core.logging import job_id_var, recording_id_var
 from blurt_core.providers.llm import build_llm_client
 from blurt_core.queue import enqueue
+from sqlalchemy.orm import Session as SASession
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,20 @@ Return a JSON object with exactly two keys:
   "confidence": a float between 0.0 and 1.0
 
 Return ONLY the JSON object, no markdown fences."""
+
+
+def _all_non_rejected_have_fields(session: SASession, recording_id: uuid.UUID) -> bool:
+    """True when every item for the recording is either rejected or has fields extracted."""
+    unfinished: int = (
+        session.query(Item)
+        .filter(
+            Item.recording_id == recording_id,
+            Item.fields.is_(None),
+            Item.status != ItemStatus.rejected,
+        )
+        .count()
+    )
+    return unfinished == 0
 
 
 def handle_route(job: Job) -> None:
@@ -78,6 +93,11 @@ def handle_route(job: Job) -> None:
         if section == "skip" or confidence < settings.router_confidence_threshold:
             item.status = ItemStatus.rejected
             session.flush()
+            if _all_non_rejected_have_fields(session, recording_id):
+                recording = session.get(Recording, recording_id)
+                if recording:
+                    recording.status = RecordingStatus.ready
+                    session.flush()
             logger.info(
                 "item routed → rejected",
                 extra={"item_id": str(item_id), "section": section, "confidence": confidence},

@@ -11,6 +11,7 @@ from blurt_api.routers.auth import router as auth_router
 from blurt_api.routers.items import router as items_router
 from blurt_api.routers.recordings import router as recordings_router
 from blurt_api.routers.summaries import router as summaries_router
+from blurt_api.routers.work_log import router as work_log_router
 
 configure_logging()
 
@@ -19,6 +20,7 @@ app.include_router(auth_router)
 app.include_router(recordings_router)
 app.include_router(items_router)
 app.include_router(summaries_router)
+app.include_router(work_log_router)
 
 
 @app.middleware("http")

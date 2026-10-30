@@ -14,6 +14,7 @@ from blurt_worker.handlers.extract import handle_extract
 from blurt_worker.handlers.normalize import handle_normalize
 from blurt_worker.handlers.route import handle_route
 from blurt_worker.handlers.split import handle_split
+from blurt_worker.handlers.summarize import handle_summarize
 from blurt_worker.handlers.transcribe import handle_transcribe
 
 configure_logging()
@@ -28,6 +29,7 @@ _handlers: dict[str, Callable[[Job], None]] = {
     "split": handle_split,
     "route": handle_route,
     "extract": handle_extract,
+    "summarize": handle_summarize,
 }
 
 # Restrict to specific job kinds if HANDLED_KINDS is set (e.g. "normalize,transcribe")

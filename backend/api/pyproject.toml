@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 dependencies = [
     "blurt_core",
     "uvicorn[standard]>=0.34",
+    "python-multipart>=0.0.20",
 ]
 
 [build-system]

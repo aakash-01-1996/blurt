@@ -10,8 +10,11 @@ repos:
     hooks:
       - id: mypy
         files: ^(core|backend)/
+        exclude: /tests/
         additional_dependencies:
           - pydantic>=2.11
           - pydantic-settings>=2.8
           - sqlalchemy>=2.0
           - fastapi>=0.115
+          - boto3>=1.37
+          - boto3-stubs[s3]>=1.37

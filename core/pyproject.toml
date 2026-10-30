@@ -10,6 +10,7 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "fastapi>=0.115",
     "httpx>=0.28",
+    "boto3>=1.37",
 ]
 
 [project.optional-dependencies]

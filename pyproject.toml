@@ -11,6 +11,7 @@ dev-dependencies = [
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "pre-commit>=4.2",
+    "boto3-stubs[s3]>=1.37",
 ]
 
 [tool.ruff]
@@ -23,7 +24,7 @@ select = ["E", "F", "I", "UP"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-exclude = ["evals/"]
+exclude = ["evals/", ".*/tests/"]
 
 [tool.pytest.ini_options]
 testpaths = ["core/tests", "backend/api/tests", "backend/worker/tests"]

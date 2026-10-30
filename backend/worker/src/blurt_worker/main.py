@@ -1,11 +1,20 @@
 import logging
 import signal
 import time
+from collections.abc import Callable
+
+from blurt_core.db.models import Job
+
+from blurt_worker.handlers.normalize import handle_normalize
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 _running = True
+
+_handlers: dict[str, Callable[[Job], None]] = {
+    "normalize": handle_normalize,
+}
 
 
 def _handle_sigterm(sig: int, frame: object) -> None:

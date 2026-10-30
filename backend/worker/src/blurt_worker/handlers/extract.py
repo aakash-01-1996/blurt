@@ -52,7 +52,7 @@ def _all_items_done(session: object, recording_id: uuid.UUID) -> bool:
     assert isinstance(session, SASession)
     from blurt_core.db.models import Item as ItemModel
 
-    unfinished = (
+    unfinished: int = (
         session.query(ItemModel)
         .filter(
             ItemModel.recording_id == recording_id,

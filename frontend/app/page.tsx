@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+interface Summary {
+  id: string;
+  week_start: string;
+  lines: string[];
+  created_at: string;
+}
+
 type RecordingStatus =
   | "uploaded"
   | "normalizing"
@@ -196,6 +203,8 @@ export default function Home() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [itemsMap, setItemsMap] = useState<Record<string, Item[]>>({});
+  const [summaries, setSummaries] = useState<Summary[]>([]);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -221,6 +230,30 @@ export default function Home() {
       )
       .catch(() => {});
   }, []);
+
+  const fetchSummaries = useCallback(() => {
+    fetch("/api/v1/summaries")
+      .then((r) => r.json())
+      .then(setSummaries)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchSummaries();
+  }, [fetchSummaries]);
+
+  const handleGenerateSummary = useCallback(async () => {
+    setGeneratingSummary(true);
+    try {
+      const res = await fetch("/api/v1/summaries/generate", { method: "POST" });
+      if (res.status === 409) {
+        await fetch("/api/v1/summaries/regenerate", { method: "POST" });
+      }
+      setTimeout(fetchSummaries, 3000);
+    } finally {
+      setGeneratingSummary(false);
+    }
+  }, [fetchSummaries]);
 
   const toggleExpand = useCallback(
     (r: Recording) => {
@@ -410,6 +443,41 @@ export default function Home() {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Weekly summary */}
+      <div className="flex items-center justify-between mt-10 mb-3">
+        <h2 className="text-sm font-semibold text-[#5C5F6A] uppercase tracking-wide">
+          This week
+        </h2>
+        <button
+          onClick={handleGenerateSummary}
+          disabled={generatingSummary}
+          className="text-xs font-semibold px-3 py-1 rounded-full bg-[#4B3FE0] text-white hover:brightness-110 transition disabled:opacity-50"
+        >
+          {generatingSummary ? "Generating…" : "Generate"}
+        </button>
+      </div>
+      {summaries.length === 0 ? (
+        <p className="text-[#5C5F6A] text-sm">No summary yet.</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {summaries.map((s) => (
+            <div key={s.id} className="bg-white rounded-2xl p-4 flex flex-col gap-2">
+              <p className="text-xs text-[#5C5F6A] font-mono">
+                Week of {new Date(s.week_start).toLocaleDateString()}
+              </p>
+              <ul className="flex flex-col gap-1">
+                {s.lines.map((line, i) => (
+                  <li key={i} className="text-sm text-gray-700 flex gap-2">
+                    <span className="text-[#4B3FE0] mt-0.5">•</span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       )}
     </main>
   );

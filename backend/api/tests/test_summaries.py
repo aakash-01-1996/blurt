@@ -157,6 +157,57 @@ def test_regenerate_always_queues(db_session: Session) -> None:
     assert r.json()["status"] == "queued"
 
 
+# ── GET /summaries/{id}/export ────────────────────────────────────────────────
+
+
+def test_export_markdown(db_session: Session) -> None:
+    summary_id = _seed_summary(db_session)
+    db_session.commit()
+
+    r = client.get(f"/api/v1/summaries/{summary_id}/export?format=md")
+    assert r.status_code == 200
+    assert "text/markdown" in r.headers["content-type"]
+    assert r.headers["content-disposition"].startswith("attachment")
+    body = r.text
+    assert body.startswith("## Week of")
+    assert "- Shipped auth refactor" in body
+    assert "- Fixed pipeline bug" in body
+
+
+def test_export_plain_text(db_session: Session) -> None:
+    summary_id = _seed_summary(db_session)
+    db_session.commit()
+
+    r = client.get(f"/api/v1/summaries/{summary_id}/export?format=txt")
+    assert r.status_code == 200
+    assert "text/plain" in r.headers["content-type"]
+    body = r.text
+    assert body.startswith("Week of")
+    assert "• Shipped auth refactor" in body
+
+
+def test_export_default_format_is_markdown(db_session: Session) -> None:
+    summary_id = _seed_summary(db_session)
+    db_session.commit()
+
+    r = client.get(f"/api/v1/summaries/{summary_id}/export")
+    assert r.status_code == 200
+    assert "text/markdown" in r.headers["content-type"]
+
+
+def test_export_invalid_format(db_session: Session) -> None:
+    summary_id = _seed_summary(db_session)
+    db_session.commit()
+
+    r = client.get(f"/api/v1/summaries/{summary_id}/export?format=pdf")
+    assert r.status_code == 422
+
+
+def test_export_404_for_unknown_summary() -> None:
+    r = client.get(f"/api/v1/summaries/{uuid.uuid4()}/export")
+    assert r.status_code == 404
+
+
 # ── WorkLogEntry creation on approve ─────────────────────────────────────────
 
 

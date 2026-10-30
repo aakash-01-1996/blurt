@@ -11,10 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class LlmClient:
-    def __init__(self, base_url: str, api_key: str, model: str) -> None:
+    def __init__(self, base_url: str, api_key: str, model: str, provider: str) -> None:
         self._base_url = base_url
         self._api_key = api_key
         self.model = model
+        self.provider = provider
 
     def chat(
         self,
@@ -56,7 +57,7 @@ class LlmClient:
             call = LlmCall(
                 job_id=job_id,
                 stage=stage,
-                provider=self._base_url,
+                provider=self.provider,
                 model=self.model,
                 prompt_version=prompt_version,
                 input_tokens=input_tokens,
@@ -75,8 +76,10 @@ def build_llm_client(settings: object) -> LlmClient:
     from blurt_core.config import Settings
 
     assert isinstance(settings, Settings)
+    provider = "groq" if "groq.com" in settings.llm_base_url else "ollama"
     return LlmClient(
         base_url=settings.llm_base_url,
         api_key=settings.llm_api_key,
         model=settings.llm_model,
+        provider=provider,
     )

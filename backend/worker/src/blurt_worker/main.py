@@ -65,6 +65,7 @@ def _process_one() -> bool:
             job_obj = session.get(Job, job_id)
             if job_obj is None:
                 return True
+            session.expunge(job_obj)
         handler(job_obj)
         with get_session() as session:
             complete(session, job_id)

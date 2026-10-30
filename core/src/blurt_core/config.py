@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     worker_concurrency: int = 1
     handled_kinds: str = ""  # comma-separated; empty = handle all kinds
 
+    # Auth
+    jwt_secret: str = "dev-secret-change-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
+
     # Frontend
     api_internal_url: str = "http://localhost:8000"
 

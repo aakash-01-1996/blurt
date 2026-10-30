@@ -37,6 +37,8 @@ def _patch_api_db(monkeypatch: pytest.MonkeyPatch, test_engine: Engine) -> None:
     """Redirect all get_session calls in the API to the test database."""
     from contextlib import contextmanager
 
+    import blurt_api.auth as auth_mod
+    import blurt_api.routers.auth as auth_router_mod
     import blurt_api.routers.items as items_mod
     import blurt_api.routers.summaries as summaries_mod
     import blurt_core.db.session as session_mod
@@ -56,5 +58,7 @@ def _patch_api_db(monkeypatch: pytest.MonkeyPatch, test_engine: Engine) -> None:
             s.close()
 
     monkeypatch.setattr(session_mod, "get_session", _test_get_session)
+    monkeypatch.setattr(auth_mod, "get_session", _test_get_session)
+    monkeypatch.setattr(auth_router_mod, "get_session", _test_get_session)
     monkeypatch.setattr(items_mod, "get_session", _test_get_session)
     monkeypatch.setattr(summaries_mod, "get_session", _test_get_session)

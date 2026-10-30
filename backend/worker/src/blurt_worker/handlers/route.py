@@ -83,6 +83,7 @@ def handle_route(job: Job) -> None:
                 extra={"item_id": str(item_id), "section": section, "confidence": confidence},
             )
         else:
+            session.flush()
             enqueue(
                 session,
                 "extract",

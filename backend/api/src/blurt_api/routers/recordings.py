@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from blurt_api.auth import CurrentUserId
 from blurt_api.deps import storage
 
 router = APIRouter(prefix="/api/v1", tags=["recordings"])
@@ -37,7 +38,7 @@ class RecordingListItem(BaseModel):
 
 
 @router.post("/recordings", status_code=status.HTTP_202_ACCEPTED, response_model=RecordingOut)
-async def upload_recording(file: UploadFile) -> Recording:
+async def upload_recording(file: UploadFile, user_id: CurrentUserId) -> Recording:
     data = await file.read()
 
     if len(data) > MAX_BYTES:
@@ -56,9 +57,6 @@ async def upload_recording(file: UploadFile) -> Recording:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Recording exceeds 10-minute limit",
         )
-
-    # Hardcode user_id for now (login is M10)
-    user_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
     recording_id = uuid.uuid4()
     ext = (file.filename or "audio").rsplit(".", 1)[-1]
     storage_key = f"recordings/{user_id}/{recording_id}.{ext}"
@@ -81,11 +79,14 @@ async def upload_recording(file: UploadFile) -> Recording:
 
 
 @router.get("/recordings", response_model=list[RecordingListItem])
-def list_recordings() -> list[Recording]:
+def list_recordings(user_id: CurrentUserId) -> list[Recording]:
     with get_session() as session:
         recordings = list(
             session.execute(
-                select(Recording).order_by(Recording.created_at.desc()).limit(20)
+                select(Recording)
+                .where(Recording.user_id == user_id)
+                .order_by(Recording.created_at.desc())
+                .limit(20)
             ).scalars()
         )
         session.expunge_all()
@@ -93,20 +94,20 @@ def list_recordings() -> list[Recording]:
 
 
 @router.get("/recordings/{recording_id}", response_model=RecordingOut)
-def get_recording(recording_id: uuid.UUID) -> Recording:
+def get_recording(recording_id: uuid.UUID, user_id: CurrentUserId) -> Recording:
     with get_session() as session:
         recording = session.get(Recording, recording_id)
-        if recording is None:
+        if recording is None or recording.user_id != user_id:
             raise HTTPException(status_code=404, detail="Recording not found")
         session.expunge(recording)
         return recording
 
 
 @router.get("/recordings/{recording_id}/audio-url")
-def audio_url(recording_id: uuid.UUID) -> dict[str, str]:
+def audio_url(recording_id: uuid.UUID, user_id: CurrentUserId) -> dict[str, str]:
     with get_session() as session:
         recording = session.get(Recording, recording_id)
-        if recording is None:
+        if recording is None or recording.user_id != user_id:
             raise HTTPException(status_code=404, detail="Recording not found")
         key = recording.storage_key
 

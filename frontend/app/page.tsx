@@ -1,6 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import AuthGate from "./auth";
+
+const TOKEN_KEY = "blurt_token";
+
+function useAuth() {
+  const [token, setToken] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null
+  );
+
+  function login(t: string) {
+    localStorage.setItem(TOKEN_KEY, t);
+    setToken(t);
+  }
+
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    setToken(null);
+  }
+
+  return { token, login, logout };
+}
 
 interface Summary {
   id: string;
@@ -247,7 +268,9 @@ function SummaryCard({ summary }: { summary: Summary }) {
   );
 }
 
-export default function Home() {
+function AppShell({ token, onLogout }: { token: string; onLogout: () => void }) {
+  const authHeader = { Authorization: `Bearer ${token}` };
+
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -262,11 +285,11 @@ export default function Home() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchRecordings = useCallback(() => {
-    fetch("/api/v1/recordings")
+    fetch("/api/v1/recordings", { headers: authHeader })
       .then((r) => r.json())
       .then(setRecordings)
       .catch(() => {});
-  }, []);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchRecordings();
@@ -274,21 +297,24 @@ export default function Home() {
     return () => clearInterval(id);
   }, [fetchRecordings]);
 
-  const fetchItems = useCallback((recordingId: string) => {
-    fetch(`/api/v1/recordings/${recordingId}/items`)
-      .then((r) => r.json())
-      .then((items: Item[]) =>
-        setItemsMap((prev) => ({ ...prev, [recordingId]: items }))
-      )
-      .catch(() => {});
-  }, []);
+  const fetchItems = useCallback(
+    (recordingId: string) => {
+      fetch(`/api/v1/recordings/${recordingId}/items`, { headers: authHeader })
+        .then((r) => r.json())
+        .then((items: Item[]) =>
+          setItemsMap((prev) => ({ ...prev, [recordingId]: items }))
+        )
+        .catch(() => {});
+    },
+    [token] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const fetchSummaries = useCallback(() => {
-    fetch("/api/v1/summaries")
+    fetch("/api/v1/summaries", { headers: authHeader })
       .then((r) => r.json())
       .then(setSummaries)
       .catch(() => {});
-  }, []);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchSummaries();
@@ -297,15 +323,18 @@ export default function Home() {
   const handleGenerateSummary = useCallback(async () => {
     setGeneratingSummary(true);
     try {
-      const res = await fetch("/api/v1/summaries/generate", { method: "POST" });
+      const res = await fetch("/api/v1/summaries/generate", {
+        method: "POST",
+        headers: authHeader,
+      });
       if (res.status === 409) {
-        await fetch("/api/v1/summaries/regenerate", { method: "POST" });
+        await fetch("/api/v1/summaries/regenerate", { method: "POST", headers: authHeader });
       }
       setTimeout(fetchSummaries, 3000);
     } finally {
       setGeneratingSummary(false);
     }
-  }, [fetchSummaries]);
+  }, [fetchSummaries, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleExpand = useCallback(
     (r: Recording) => {
@@ -321,7 +350,7 @@ export default function Home() {
     async (itemId: string, action: "approve" | "reject", recordingId: string) => {
       const res = await fetch(`/api/v1/items/${itemId}/review`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action }),
       });
       if (!res.ok) return;
@@ -333,14 +362,14 @@ export default function Home() {
         ),
       }));
     },
-    []
+    [token]
   );
 
   const handlePatch = useCallback(
     async (itemId: string, fields: Record<string, string>, recordingId: string) => {
       const res = await fetch(`/api/v1/items/${itemId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ fields }),
       });
       if (!res.ok) return;
@@ -352,7 +381,7 @@ export default function Home() {
         ),
       }));
     },
-    []
+    [token]
   );
 
   async function startRecording() {
@@ -391,7 +420,11 @@ export default function Home() {
 
     try {
       setUploadError(null);
-      const res = await fetch("/api/v1/recordings", { method: "POST", body: form });
+      const res = await fetch("/api/v1/recordings", {
+        method: "POST",
+        headers: authHeader,
+        body: form,
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         setUploadError(body?.detail ?? `Upload failed (${res.status})`);
@@ -408,12 +441,20 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#F4F5F7] p-8 max-w-xl mx-auto">
-      <h1
-        className="text-3xl font-black text-[#15161A] mb-8"
-        style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
-      >
-        Blurt
-      </h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1
+          className="text-3xl font-black text-[#15161A]"
+          style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+        >
+          Blurt
+        </h1>
+        <button
+          onClick={onLogout}
+          className="text-xs text-gray-400 hover:text-gray-600 transition"
+        >
+          Log out
+        </button>
+      </div>
 
       {/* Record button */}
       <div className="flex flex-col items-center gap-4 mb-10">
@@ -521,4 +562,10 @@ export default function Home() {
       )}
     </main>
   );
+}
+
+export default function Home() {
+  const { token, login, logout } = useAuth();
+  if (!token) return <AuthGate onAuth={login} />;
+  return <AppShell token={token} onLogout={logout} />;
 }

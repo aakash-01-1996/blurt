@@ -1,6 +1,5 @@
 import blurt_api.deps as deps
 import pytest
-from blurt_api.main import app
 from blurt_core.providers.storage import FakeStorage
 from fastapi.testclient import TestClient
 
@@ -16,17 +15,14 @@ def fake_storage(monkeypatch: pytest.MonkeyPatch) -> FakeStorage:
     return fs
 
 
-client = TestClient(app)
-
-
-def test_health() -> None:
-    r = client.get("/health")
+def test_health(api_client: TestClient) -> None:
+    r = api_client.get("/health")
     assert r.status_code == 200
 
 
-def test_upload_too_large() -> None:
+def test_upload_too_large(api_client: TestClient) -> None:
     big = b"x" * (26 * 1024 * 1024)
-    r = client.post(
+    r = api_client.post(
         "/api/v1/recordings",
         files={"file": ("rec.webm", big, "audio/webm")},
     )

@@ -14,6 +14,8 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from blurt_api.auth import CurrentUserId
+
 router = APIRouter(prefix="/api/v1", tags=["items"])
 
 
@@ -38,10 +40,10 @@ class PatchItemRequest(BaseModel):
 
 
 @router.get("/recordings/{recording_id}/items", response_model=list[ItemOut])
-def list_items(recording_id: uuid.UUID) -> list[Item]:
+def list_items(recording_id: uuid.UUID, user_id: CurrentUserId) -> list[Item]:
     with get_session() as session:
         recording = session.get(Recording, recording_id)
-        if recording is None:
+        if recording is None or recording.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recording not found")
 
         items = list(
@@ -54,7 +56,7 @@ def list_items(recording_id: uuid.UUID) -> list[Item]:
 
 
 @router.post("/items/{item_id}/review", response_model=ItemOut)
-def review_item(item_id: uuid.UUID, body: ReviewRequest) -> Item:
+def review_item(item_id: uuid.UUID, body: ReviewRequest, user_id: CurrentUserId) -> Item:
     if body.action not in ("approve", "reject"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -63,7 +65,8 @@ def review_item(item_id: uuid.UUID, body: ReviewRequest) -> Item:
 
     with get_session() as session:
         item = session.get(Item, item_id)
-        if item is None:
+        recording = session.get(Recording, item.recording_id) if item else None
+        if item is None or recording is None or recording.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
         if item.status in (ItemStatus.approved, ItemStatus.rejected):
@@ -116,10 +119,11 @@ def _create_work_log_entry(session: object, item: Item) -> None:
 
 
 @router.patch("/items/{item_id}", response_model=ItemOut)
-def patch_item(item_id: uuid.UUID, body: PatchItemRequest) -> Item:
+def patch_item(item_id: uuid.UUID, body: PatchItemRequest, user_id: CurrentUserId) -> Item:
     with get_session() as session:
         item = session.get(Item, item_id)
-        if item is None:
+        recording = session.get(Recording, item.recording_id) if item else None
+        if item is None or recording is None or recording.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
         if item.status != ItemStatus.approved:

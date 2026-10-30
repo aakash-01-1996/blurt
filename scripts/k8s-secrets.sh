@@ -21,6 +21,7 @@ kubectl create secret generic blurt-secrets \
   --from-literal=S3_SECRET_ACCESS_KEY="$(get_secret S3_SECRET_ACCESS_KEY)" \
   --from-literal=S3_ENDPOINT_URL="$(get_secret S3_ENDPOINT_URL)" \
   --from-literal=LLM_API_KEY="$(get_secret LLM_API_KEY)" \
+  --from-literal=JWT_SECRET="$(get_secret JWT_SECRET)" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 echo "✓ blurt-secrets applied to namespace $NAMESPACE"

@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from blurt_core.db.models import Item, ItemStatus, Recording
+from blurt_core.db.models import Correction, CorrectionKind, Item, ItemStatus, Recording
 from blurt_core.db.session import get_session
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
@@ -24,6 +24,10 @@ class ItemOut(BaseModel):
 
 class ReviewRequest(BaseModel):
     action: str  # "approve" | "reject"
+
+
+class PatchItemRequest(BaseModel):
+    fields: dict[str, str]
 
 
 @router.get("/recordings/{recording_id}/items", response_model=list[ItemOut])
@@ -63,6 +67,36 @@ def review_item(item_id: uuid.UUID, body: ReviewRequest) -> Item:
 
         item.status = ItemStatus.approved if body.action == "approve" else ItemStatus.rejected
         item.reviewed_at = datetime.now(UTC)
+        session.flush()
+        session.expunge(item)
+        return item
+
+
+@router.patch("/items/{item_id}", response_model=ItemOut)
+def patch_item(item_id: uuid.UUID, body: PatchItemRequest) -> Item:
+    with get_session() as session:
+        item = session.get(Item, item_id)
+        if item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+        if item.status != ItemStatus.approved:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only approved items can be edited",
+            )
+
+        before = dict(item.fields) if item.fields else {}
+        after = {**before, **body.fields}
+
+        correction = Correction(
+            item_id=item_id,
+            kind=CorrectionKind.field_edit,
+            before=before,
+            after=after,
+        )
+        session.add(correction)
+
+        item.fields = after
         session.flush()
         session.expunge(item)
         return item

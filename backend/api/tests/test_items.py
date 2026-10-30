@@ -123,3 +123,47 @@ def test_review_item_409_if_already_reviewed(db_session: Session) -> None:
 
     r = client.post(f"/api/v1/items/{item_id}/review", json={"action": "reject"})
     assert r.status_code == 409
+
+
+# ── PATCH /items/{id} ─────────────────────────────────────────────────────────
+
+
+def test_patch_item_updates_fields(db_session: Session) -> None:
+    recording_id = _seed_recording(db_session)
+    item_id = _seed_item(db_session, recording_id, status=ItemStatus.approved)
+    db_session.commit()
+
+    r = client.patch(f"/api/v1/items/{item_id}", json={"fields": {"project": "infra"}})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["fields"]["project"] == "infra"
+    assert data["fields"]["accomplishment"] == "Shipped the auth refactor"
+
+
+def test_patch_item_stores_correction(db_session: Session) -> None:
+    from blurt_core.db.models import Correction
+
+    recording_id = _seed_recording(db_session)
+    item_id = _seed_item(db_session, recording_id, status=ItemStatus.approved)
+    db_session.commit()
+
+    client.patch(f"/api/v1/items/{item_id}", json={"fields": {"project": "infra"}})
+
+    db_session.expire_all()
+    correction = db_session.query(Correction).filter(Correction.item_id == item_id).one()
+    assert correction.before["project"] == "backend"
+    assert correction.after["project"] == "infra"
+
+
+def test_patch_item_404_for_unknown_item() -> None:
+    r = client.patch(f"/api/v1/items/{uuid.uuid4()}", json={"fields": {"title": "x"}})
+    assert r.status_code == 404
+
+
+def test_patch_item_409_if_not_approved(db_session: Session) -> None:
+    recording_id = _seed_recording(db_session)
+    item_id = _seed_item(db_session, recording_id, status=ItemStatus.pending)
+    db_session.commit()
+
+    r = client.patch(f"/api/v1/items/{item_id}", json={"fields": {"title": "x"}})
+    assert r.status_code == 409

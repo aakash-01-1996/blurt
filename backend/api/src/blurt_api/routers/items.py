@@ -1,7 +1,14 @@
 import uuid
 from datetime import UTC, datetime
 
-from blurt_core.db.models import Correction, CorrectionKind, Item, ItemStatus, Recording
+from blurt_core.db.models import (
+    Correction,
+    CorrectionKind,
+    Item,
+    ItemStatus,
+    Recording,
+    WorkLogEntry,
+)
 from blurt_core.db.session import get_session
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
@@ -68,8 +75,44 @@ def review_item(item_id: uuid.UUID, body: ReviewRequest) -> Item:
         item.status = ItemStatus.approved if body.action == "approve" else ItemStatus.rejected
         item.reviewed_at = datetime.now(UTC)
         session.flush()
+
+        if body.action == "approve" and item.section == "work_log" and item.fields:
+            _create_work_log_entry(session, item)
+
+        session.flush()
         session.expunge(item)
         return item
+
+
+def _create_work_log_entry(session: object, item: Item) -> None:
+    from sqlalchemy.orm import Session as SASession
+
+    assert isinstance(session, SASession)
+
+    fields = item.fields or {}
+
+    occurred_on: datetime | None = None
+    raw_date = fields.get("occurred_on")
+    if raw_date:
+        try:
+            occurred_on = datetime.fromisoformat(raw_date).replace(tzinfo=UTC)
+        except ValueError:
+            pass
+
+    recording = session.get(Recording, item.recording_id)
+    user_id = recording.user_id if recording else None
+    if user_id is None:
+        return
+
+    entry = WorkLogEntry(
+        user_id=user_id,
+        item_id=item.id,
+        accomplishment=fields.get("accomplishment"),
+        impact=fields.get("impact"),
+        project=fields.get("project"),
+        occurred_on=occurred_on,
+    )
+    session.add(entry)
 
 
 @router.patch("/items/{item_id}", response_model=ItemOut)

@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(du -sh /Users/aakash/Developer/blurt/*)",
+      "Bash(brew list:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(uv sync:*)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm install:*)",
+      "Bash(uv run:*)",
+      "Bash(npm run:*)",
+      "Bash(ls /Users/aakash/Developer/blurt/*.pdf)",
+      "Bash(grep -E \"\\\\.\\(pdf|md\\)$\")",
+      "Bash(git rm:*)",
+      "Bash(gh repo:*)",
+      "Bash(git push:*)",
+      "Bash(createdb blurt_test)",
+      "Bash(createdb blurt:*)",
+      "Bash(git:*)",
+      "Bash(gh pr:*)"
+    ]
+  }
+}

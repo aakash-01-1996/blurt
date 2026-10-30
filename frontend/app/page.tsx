@@ -130,6 +130,7 @@ function ItemCard({
 export default function Home() {
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -224,7 +225,14 @@ export default function Home() {
     form.append("file", blob, `recording.${ext}`);
 
     try {
-      await fetch("/api/v1/recordings", { method: "POST", body: form });
+      setUploadError(null);
+      const res = await fetch("/api/v1/recordings", { method: "POST", body: form });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setUploadError(body?.detail ?? `Upload failed (${res.status})`);
+      }
+    } catch {
+      setUploadError("Upload failed — check your connection");
     } finally {
       setUploading(false);
     }
@@ -259,6 +267,9 @@ export default function Home() {
         </button>
         {recording && (
           <span className="text-[#5C5F6A] font-mono text-sm">{fmt(elapsed)}</span>
+        )}
+        {uploadError && (
+          <p className="text-sm text-red-600 text-center">{uploadError}</p>
         )}
       </div>
 

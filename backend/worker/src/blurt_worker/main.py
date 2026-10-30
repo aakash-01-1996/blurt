@@ -24,6 +24,13 @@ _handlers: dict[str, Callable[[Job], None]] = {
     "transcribe": handle_transcribe,
 }
 
+# Restrict to specific job kinds if HANDLED_KINDS is set (e.g. "normalize,transcribe")
+_HANDLED_KINDS: list[str] | None = (
+    [k.strip() for k in settings.handled_kinds.split(",") if k.strip()]
+    if settings.handled_kinds
+    else None
+)
+
 
 def _handle_sigterm(sig: int, frame: object) -> None:
     global _running
@@ -34,7 +41,7 @@ def _handle_sigterm(sig: int, frame: object) -> None:
 def _process_one() -> bool:
     """Claim and process one job. Returns True if a job was processed."""
     with get_session() as session:
-        job = claim(session, _WORKER_ID)
+        job = claim(session, _WORKER_ID, kinds=_HANDLED_KINDS)
         if job is None:
             return False
         job_id = job.id
@@ -65,7 +72,10 @@ def _process_one() -> bool:
 
 def main() -> None:
     signal.signal(signal.SIGTERM, _handle_sigterm)
-    logger.info("worker started", extra={"pod": settings.api_internal_url})
+    logger.info(
+        "worker started",
+        extra={"handled_kinds": _HANDLED_KINDS or "all"},
+    )
 
     last_recover = 0.0
 

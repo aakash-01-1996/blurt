@@ -31,9 +31,16 @@ def enqueue(
     return job
 
 
-def claim(session: Session, worker_id: str) -> Job | None:
+def claim(
+    session: Session,
+    worker_id: str,
+    *,
+    kinds: list[str] | None = None,
+) -> Job | None:
+    """Claim the next available job. Pass `kinds` to restrict to specific job types."""
+    kinds_filter = "AND kind = ANY(:kinds)" if kinds else ""
     result = session.execute(
-        text("""
+        text(f"""
             UPDATE jobs
             SET status = 'running',
                 locked_at = now(),
@@ -42,13 +49,14 @@ def claim(session: Session, worker_id: str) -> Job | None:
             WHERE id = (
                 SELECT id FROM jobs
                 WHERE status = 'queued' AND run_after <= now()
+                {kinds_filter}
                 ORDER BY created_at
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
             )
             RETURNING *
         """),
-        {"worker_id": worker_id},
+        {"worker_id": worker_id, "kinds": kinds},
     )
     row = result.mappings().first()
     if row is None:

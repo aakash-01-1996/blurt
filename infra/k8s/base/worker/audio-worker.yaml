@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: worker
+  name: audio-worker
   namespace: blurt
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: worker
+      app: audio-worker
   template:
     metadata:
       labels:
-        app: worker
+        app: audio-worker
         app.kubernetes.io/part-of: blurt
     spec:
       terminationGracePeriodSeconds: 60
@@ -28,10 +28,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: HANDLED_KINDS
+              value: "normalize,transcribe"
           resources:
             requests:
               cpu: 200m
-              memory: 256Mi
+              memory: 512Mi
             limits:
               cpu: 1000m
-              memory: 512Mi
+              memory: 1Gi

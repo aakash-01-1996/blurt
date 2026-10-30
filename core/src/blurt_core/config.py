@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # Pipeline
     router_confidence_threshold: float = 0.7
     worker_concurrency: int = 1
+    handled_kinds: str = ""  # comma-separated; empty = handle all kinds
 
     # Frontend
     api_internal_url: str = "http://localhost:8000"

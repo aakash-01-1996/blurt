@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-worker
+  namespace: blurt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-worker
+  template:
+    metadata:
+      labels:
+        app: llm-worker
+        app.kubernetes.io/part-of: blurt
+    spec:
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: worker
+          image: blurt-worker:dev
+          envFrom:
+            - configMapRef:
+                name: blurt-config
+            - secretRef:
+                name: blurt-secrets
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HANDLED_KINDS
+              value: "split,route,extract"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

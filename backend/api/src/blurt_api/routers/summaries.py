@@ -4,7 +4,8 @@ from datetime import UTC, datetime, timedelta
 from blurt_core.db.models import WeeklySummary
 from blurt_core.db.session import get_session
 from blurt_core.queue import enqueue
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -92,3 +93,44 @@ def regenerate_summary() -> dict[str, str]:
         )
 
     return {"status": "queued", "week_start": week_start.isoformat()}
+
+
+def _format_markdown(summary: WeeklySummary) -> str:
+    date_str = summary.week_start.strftime("%b %-d, %Y")
+    lines = "\n".join(f"- {line}" for line in (summary.lines or []))
+    return f"## Week of {date_str}\n\n{lines}\n"
+
+
+def _format_text(summary: WeeklySummary) -> str:
+    date_str = summary.week_start.strftime("%b %-d, %Y")
+    lines = "\n".join(f"• {line}" for line in (summary.lines or []))
+    return f"Week of {date_str}\n\n{lines}\n"
+
+
+@router.get("/summaries/{summary_id}/export", response_class=PlainTextResponse)
+def export_summary(
+    summary_id: uuid.UUID,
+    format: str = Query(default="md", pattern="^(md|txt)$"),
+) -> PlainTextResponse:
+    with get_session() as session:
+        summary = session.get(WeeklySummary, summary_id)
+        if summary is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Summary not found")
+        if summary.user_id != _DEV_USER_ID:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Summary not found")
+
+        if format == "txt":
+            content = _format_text(summary)
+            media_type = "text/plain"
+        else:
+            content = _format_markdown(summary)
+            media_type = "text/markdown"
+
+        week_str = summary.week_start.strftime("%Y-%m-%d")
+
+    filename = f"blurt-summary-{week_str}.{'md' if format == 'md' else 'txt'}"
+    return PlainTextResponse(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -20,14 +20,14 @@ export function AppShell({ token, onLogout }: { token: string; onLogout: () => v
   const [reviewCount, setReviewCount] = useState(0);
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-surface">
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
         reviewCount={reviewCount}
         onLogout={onLogout}
       />
-      <main className="flex-1 min-w-0 bg-[#F8F9FA]">
+      <main className="flex-1 min-w-0 bg-canvas">
         {activePage === "record" && (
           <RecordPage token={token} onNavigateReview={() => setActivePage("review")} />
         )}
@@ -36,6 +36,7 @@ export function AppShell({ token, onLogout }: { token: string; onLogout: () => v
         )}
         {activePage === "work-log" && <WorkLogPage token={token} />}
         {activePage === "tasks" && <PlaceholderPage title="Tasks" />}
+        {activePage === "lists" && <PlaceholderPage title="Lists" />}
         {activePage === "settings" && <PlaceholderPage title="Settings" />}
       </main>
     </div>

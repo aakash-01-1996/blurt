@@ -44,7 +44,7 @@ export interface Item {
   followup_question: string | null;
 }
 
-export type Page = "record" | "review" | "work-log" | "tasks" | "settings";
+export type Page = "record" | "review" | "work-log" | "tasks" | "lists" | "settings";
 
 export const STATUS_COLORS: Record<RecordingStatus, string> = {
   uploaded: "bg-gray-100 text-gray-600",
@@ -58,13 +58,30 @@ export const STATUS_COLORS: Record<RecordingStatus, string> = {
 };
 
 export const SECTION_LABELS: Record<string, string> = {
-  work_log: "Work Log",
-  task: "Task",
+  work_log: "Work log",
+  task: "Tasks",
+  list: "New list",
   note: "Note",
+  unsorted: "Unsorted",
 };
 
 export const SECTION_COLORS: Record<string, string> = {
-  work_log: "bg-violet-100 text-violet-700",
-  task: "bg-amber-100 text-amber-700",
-  note: "bg-sky-100 text-sky-700",
+  work_log: "bg-[#E8F1FD] text-[#0071E3]",
+  task: "bg-[#FDF0E4] text-[#C2772B]",
+  list: "bg-[#E7F5EC] text-[#2E8B57]",
+  note: "bg-sky-50 text-sky-700",
+  unsorted: "bg-gray-100 text-gray-500",
 };
+
+/** Lighter solid tints for highlighting transcript spans by section. */
+export const SECTION_TINTS: Record<string, string> = {
+  work_log: "bg-[#D4E7FB]",
+  task: "bg-[#FBE4CC]",
+  list: "bg-[#D6EEDE]",
+  note: "bg-sky-100",
+  unsorted: "bg-gray-100",
+};
+
+export function sectionTint(section: string): string {
+  return SECTION_TINTS[section] ?? "bg-gray-100";
+}

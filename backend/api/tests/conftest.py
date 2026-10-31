@@ -41,7 +41,9 @@ def _patch_api_db(monkeypatch: pytest.MonkeyPatch, test_engine: Engine) -> None:
 
     import blurt_api.auth as auth_mod
     import blurt_api.routers.auth as auth_router_mod
+    import blurt_api.routers.export as export_mod
     import blurt_api.routers.items as items_mod
+    import blurt_api.routers.recordings as recordings_mod
     import blurt_api.routers.summaries as summaries_mod
     import blurt_api.routers.tasks as tasks_mod
     import blurt_api.routers.work_log as work_log_mod
@@ -64,7 +66,9 @@ def _patch_api_db(monkeypatch: pytest.MonkeyPatch, test_engine: Engine) -> None:
     monkeypatch.setattr(session_mod, "get_session", _test_get_session)
     monkeypatch.setattr(auth_mod, "get_session", _test_get_session)
     monkeypatch.setattr(auth_router_mod, "get_session", _test_get_session)
+    monkeypatch.setattr(export_mod, "get_session", _test_get_session)
     monkeypatch.setattr(items_mod, "get_session", _test_get_session)
+    monkeypatch.setattr(recordings_mod, "get_session", _test_get_session)
     monkeypatch.setattr(summaries_mod, "get_session", _test_get_session)
     monkeypatch.setattr(tasks_mod, "get_session", _test_get_session)
     monkeypatch.setattr(work_log_mod, "get_session", _test_get_session)

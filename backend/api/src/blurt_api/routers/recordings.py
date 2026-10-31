@@ -2,13 +2,21 @@ import uuid
 
 from blurt_core.audio import AudioError, probe_duration
 from blurt_core.config import settings
-from blurt_core.db.models import Recording, RecordingStatus
+from blurt_core.db.models import (
+    Correction,
+    Item,
+    Recording,
+    RecordingStatus,
+    Task,
+    Transcript,
+    WorkLogEntry,
+)
 from blurt_core.db.session import get_session
 from blurt_core.queue import enqueue
 from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from blurt_api.auth import CurrentUserId
 from blurt_api.deps import storage
@@ -101,6 +109,33 @@ def get_recording(recording_id: uuid.UUID, user_id: CurrentUserId) -> Recording:
             raise HTTPException(status_code=404, detail="Recording not found")
         session.expunge(recording)
         return recording
+
+
+@router.delete("/recordings/{recording_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_recording(recording_id: uuid.UUID, user_id: CurrentUserId) -> None:
+    """Delete a recording and everything derived from it (items, tasks, work-log
+    entries, corrections, transcript) plus the stored audio file."""
+    with get_session() as session:
+        recording = session.get(Recording, recording_id)
+        if recording is None or recording.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Recording not found")
+        storage_key = recording.storage_key
+
+        item_ids = list(
+            session.execute(select(Item.id).where(Item.recording_id == recording_id)).scalars()
+        )
+        if item_ids:
+            session.execute(delete(Correction).where(Correction.item_id.in_(item_ids)))
+            session.execute(delete(Task).where(Task.item_id.in_(item_ids)))
+            session.execute(delete(WorkLogEntry).where(WorkLogEntry.item_id.in_(item_ids)))
+        session.execute(delete(Item).where(Item.recording_id == recording_id))
+        session.execute(delete(Transcript).where(Transcript.recording_id == recording_id))
+        session.delete(recording)
+
+    try:
+        storage.delete(storage_key)
+    except Exception:
+        pass  # best-effort: DB rows are already gone
 
 
 @router.get("/recordings/{recording_id}/audio-url")

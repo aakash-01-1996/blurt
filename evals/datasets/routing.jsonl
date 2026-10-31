@@ -1,0 +1,17 @@
+# Routing eval cases: span text -> expected section (work_log | task | note | skip)
+{"id": "r-wl-1", "text": "I shipped the retry fix in the upload service today.", "expected_section": "work_log"}
+{"id": "r-wl-2", "text": "Fixed three flaky integration tests this afternoon.", "expected_section": "work_log"}
+{"id": "r-wl-3", "text": "Deployed the new auth service to staging.", "expected_section": "work_log"}
+{"id": "r-wl-4", "text": "Reviewed the caching design doc for the search team.", "expected_section": "work_log"}
+{"id": "r-tk-1", "text": "I need to call the dentist on Tuesday.", "expected_section": "task"}
+{"id": "r-tk-2", "text": "Remind me to send the invoice tomorrow morning.", "expected_section": "task"}
+{"id": "r-tk-3", "text": "Don't forget to renew the SSL certificate next week.", "expected_section": "task"}
+{"id": "r-tk-4", "text": "I should follow up with the vendor about pricing.", "expected_section": "task"}
+{"id": "r-nt-1", "text": "The new API rate limit is one hundred requests per minute.", "expected_section": "note"}
+{"id": "r-nt-2", "text": "Idea: we could cache the user profile to cut latency.", "expected_section": "note"}
+{"id": "r-nt-3", "text": "The team offsite is in Berlin this year.", "expected_section": "note"}
+{"id": "r-nt-4", "text": "Worth remembering that the client prefers email over calls.", "expected_section": "note"}
+{"id": "r-sk-1", "text": "Um, testing, one two three.", "expected_section": "skip"}
+{"id": "r-sk-2", "text": "Never mind, ignore that.", "expected_section": "skip"}
+{"id": "r-sk-3", "text": "Uh, what else was there.", "expected_section": "skip"}
+{"id": "r-sk-4", "text": "Okay, that's the end of the day.", "expected_section": "skip"}

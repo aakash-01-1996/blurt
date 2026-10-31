@@ -37,3 +37,6 @@ CLAUDE.md
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# eval run artifacts
+evals/reports/

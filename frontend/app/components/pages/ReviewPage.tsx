@@ -100,26 +100,34 @@ function ReviewItemCard({
         </div>
       )}
 
-      {/* Quote */}
-      <p className="text-xs text-gray-400 italic border-l-2 border-gray-200 pl-3 -mt-1">
-        &ldquo;{item.span_text}&rdquo;
-      </p>
+      {/* Audio snippet */}
+      <div className="bg-gray-50 rounded-xl px-3 py-2.5 flex items-start gap-2.5 -mt-1">
+        <span className="text-[10px] font-mono text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 shrink-0 mt-0.5">
+          ▶
+        </span>
+        <p className="text-xs text-gray-500 italic leading-relaxed">
+          &ldquo;{item.span_text}&rdquo;
+        </p>
+      </div>
 
       {/* Actions */}
       {!reviewed && !editing && (
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-2 pt-1 flex-wrap">
           <button
             onClick={() => onReview(item.id, "approve")}
             className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#15161A] text-white hover:bg-[#2d2f36] transition"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 7l3.5 3.5L12 3.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M2 6.5l3 3L11 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Approve
           </button>
           <button onClick={startEdit}
             className="text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-[#15161A] hover:bg-gray-50 transition">
             Edit
+          </button>
+          <button className="text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-[#15161A] hover:bg-gray-50 transition">
+            Move to…
           </button>
           <button
             onClick={() => onReview(item.id, "reject")}
@@ -242,10 +250,9 @@ export function ReviewPage({ token, onCountChange }: ReviewPageProps) {
         <h1 className="text-2xl font-black text-[#15161A]" style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}>
           Review inbox
         </h1>
-        <span className="text-xs text-gray-400 flex items-center gap-1 mt-1.5">
+        <span className="text-xs text-gray-400 flex items-center gap-1.5 mt-1.5">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <circle cx="6" cy="6" r="5" stroke="#9CA3AF" strokeWidth="1.2" />
-            <path d="M6 4v2.5L7.5 8" stroke="#9CA3AF" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M6 1L1.5 3v3.5C1.5 9 3.5 11 6 11c2.5 0 4.5-2 4.5-4.5V3L6 1z" stroke="#9CA3AF" strokeWidth="1.2" strokeLinejoin="round" />
           </svg>
           Nothing is saved until you approve it.
         </span>

@@ -71,7 +71,7 @@ interface SidebarProps {
 
 export function Sidebar({ activePage, onNavigate, reviewCount, onLogout }: SidebarProps) {
   return (
-    <aside className="w-[130px] min-h-screen bg-[#F4F5F7] flex flex-col border-r border-gray-200 shrink-0">
+    <aside className="w-[148px] min-h-screen bg-white flex flex-col border-r border-gray-100 shrink-0">
       {/* Logo */}
       <div className="px-4 pt-5 pb-4">
         <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ export function Sidebar({ activePage, onNavigate, reviewCount, onLogout }: Sideb
               className={`flex items-center gap-2.5 w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                 active
                   ? "bg-[#4B3FE0]/10 text-[#4B3FE0]"
-                  : "text-[#5C5F6A] hover:bg-gray-200/60 hover:text-[#15161A]"
+                  : "text-[#5C5F6A] hover:bg-gray-100 hover:text-[#15161A]"
               }`}
             >
               <span className={active ? "text-[#4B3FE0]" : "text-[#9CA3AF]"}>{icon}</span>
@@ -117,7 +117,7 @@ export function Sidebar({ activePage, onNavigate, reviewCount, onLogout }: Sideb
 
       {/* Local mode badge + logout */}
       <div className="px-3 pb-5 flex flex-col gap-2">
-        <div className="bg-white rounded-xl p-2.5 border border-gray-200">
+        <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100">
           <div className="flex items-center gap-1.5 mb-1">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <rect x="1" y="4" width="10" height="7" rx="1" stroke="#9CA3AF" strokeWidth="1.2" />

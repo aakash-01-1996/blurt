@@ -1,86 +1,75 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Recording, STATUS_COLORS, Summary } from "../../types";
+import { useEffect, useRef, useState } from "react";
+import { Item, Recording, Summary } from "../../types";
 import { ShimmerBox, ShimmerRow } from "../Shimmer";
+
+const WEEK_ROWS = [
+  { label: "Work log", color: "bg-violet-50 text-violet-700" },
+  { label: "Tasks",    color: "bg-amber-50 text-amber-700" },
+  { label: "Lists",    color: "bg-emerald-50 text-emerald-700" },
+] as const;
 
 function ThisWeekPanel({
   summaries,
   loading,
-  onGenerate,
-  generating,
   onOpenWorkLog,
 }: {
   summaries: Summary[];
   loading: boolean;
-  onGenerate: () => void;
-  generating: boolean;
   onOpenWorkLog: () => void;
 }) {
   const latest = summaries[0] ?? null;
+  const workLogCount = latest?.lines.length ?? 0;
 
   return (
-    <div className="bg-white rounded-2xl p-5 flex flex-col gap-4 h-full">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-2xl p-5 flex flex-col gap-3 h-full">
+      <div>
         <h2 className="text-sm font-bold text-[#15161A]">This week</h2>
-        <button
-          onClick={onGenerate}
-          disabled={generating}
-          className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#4B3FE0] text-white hover:brightness-110 transition disabled:opacity-50"
-        >
-          {generating ? "…" : "Generate"}
-        </button>
+        {!loading && (
+          <p className="text-xs text-gray-400 mt-0.5">
+            {workLogCount} items kept
+          </p>
+        )}
       </div>
 
       {loading ? (
-        <div className="flex flex-col gap-2">
-          <ShimmerBox className="h-3 w-28" />
-          <ShimmerBox className="h-10 w-full rounded-xl" />
-          <ShimmerBox className="h-10 w-full rounded-xl" />
+        <div className="flex flex-col gap-2 mt-1">
+          <ShimmerBox className="h-9 w-full rounded-lg" />
+          <ShimmerBox className="h-9 w-full rounded-lg" />
+          <ShimmerBox className="h-9 w-full rounded-lg" />
         </div>
-      ) : latest ? (
-        <>
-          <p className="text-[11px] text-gray-400 font-mono -mt-2">
-            {new Date(latest.week_start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            {" – "}
-            {new Date(
-              new Date(latest.week_start).getTime() + 6 * 24 * 60 * 60 * 1000
-            ).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-          </p>
-          <div className="flex flex-col gap-1.5">
-            {(
-              [
-                { label: "Work log", count: latest.lines.length, color: "bg-violet-100 text-violet-700" },
-              ] as const
-            ).map(({ label, count, color }) => (
-              <div
-                key={label}
-                className={`flex items-center justify-between rounded-lg px-3 py-2 ${color}`}
-              >
-                <span className="text-xs font-semibold">{label}</span>
-                <span className="text-xs font-bold">{count}</span>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={onOpenWorkLog}
-            className="text-xs font-semibold text-[#4B3FE0] hover:underline text-left mt-auto"
-          >
-            Open this week&apos;s work log →
-          </button>
-        </>
       ) : (
-        <p className="text-xs text-gray-400">No summary yet for this week.</p>
+        <div className="flex flex-col gap-1.5 mt-1">
+          {WEEK_ROWS.map(({ label, color }, i) => (
+            <div
+              key={label}
+              className={`flex items-center justify-between rounded-lg px-3 py-2.5 ${color}`}
+            >
+              <span className="text-xs font-semibold">{label}</span>
+              <span className="text-xs font-bold">{i === 0 ? workLogCount : 0}</span>
+            </div>
+          ))}
+        </div>
       )}
+
+      <button
+        onClick={onOpenWorkLog}
+        className="text-xs font-semibold text-[#4B3FE0] hover:underline text-left mt-auto pt-1"
+      >
+        Open this week&apos;s work log →
+      </button>
     </div>
   );
 }
 
 function RecordingRow({
   recording,
+  itemCounts,
   onReview,
 }: {
   recording: Recording;
+  itemCounts: { pending: number; kept: number } | null;
   onReview: (id: string) => void;
 }) {
   const date = new Date(recording.created_at);
@@ -98,39 +87,55 @@ function RecordingRow({
     : null;
 
   const processing = recording.status !== "ready" && recording.status !== "failed";
+  const allReviewed = recording.status === "ready" && itemCounts !== null && itemCounts.pending === 0;
 
   return (
-    <div className="bg-white rounded-2xl px-4 py-3 flex items-center justify-between">
+    <div className="bg-white rounded-2xl px-4 py-3.5 flex items-center justify-between border border-gray-100">
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-semibold text-[#15161A]">{dateLabel}</span>
-        <span className="text-xs text-gray-400 font-mono">
-          {dur ? `${dur} · ` : ""}
-          {recording.status === "failed"
-            ? "Failed"
-            : processing
-              ? statusLabel(recording.status)
-              : "Ready"}
+        <span className="text-xs text-gray-400">
+          {dur ? `${dur}` : "—"}
         </span>
       </div>
 
-      {recording.status === "ready" && (
-        <button
-          onClick={() => onReview(recording.id)}
-          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#15161A] text-white hover:bg-[#2d2f36] transition"
-        >
-          Review
-        </button>
-      )}
-      {processing && (
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[recording.status]}`}>
-          {statusLabel(recording.status)}
-        </span>
-      )}
-      {recording.status === "failed" && (
-        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-100 text-red-700">
-          Failed
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        {recording.status === "ready" && !allReviewed && itemCounts !== null && itemCounts.pending > 0 && (
+          <>
+            <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+              {itemCounts.pending} item{itemCounts.pending !== 1 ? "s" : ""} to review
+            </span>
+            <button
+              onClick={() => onReview(recording.id)}
+              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#15161A] text-white hover:bg-[#2d2f36] transition"
+            >
+              Review
+            </button>
+          </>
+        )}
+        {recording.status === "ready" && allReviewed && (
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+            {itemCounts!.kept} item{itemCounts!.kept !== 1 ? "s" : ""} kept
+          </span>
+        )}
+        {recording.status === "ready" && itemCounts === null && (
+          <button
+            onClick={() => onReview(recording.id)}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[#15161A] text-white hover:bg-[#2d2f36] transition"
+          >
+            Review
+          </button>
+        )}
+        {processing && (
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+            {statusLabel(recording.status)}
+          </span>
+        )}
+        {recording.status === "failed" && (
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+            Failed
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -172,56 +177,52 @@ export function RecordPage({ token, onNavigateReview }: RecordPageProps) {
   const [elapsed, setElapsed] = useState(0);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
+  const [itemCountsMap, setItemCountsMap] = useState<Record<string, { pending: number; kept: number }>>({});
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [summariesLoading, setSummariesLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
 
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchRecordings = useCallback(() => {
-    fetch("/api/v1/recordings", { headers: authHeader })
-      .then((r) => r.json())
-      .then((data) => {
+  const [refreshTick, setRefreshTick] = useState(0);
+  function triggerRefresh() { setRefreshTick((n) => n + 1); }
+
+  useEffect(() => {
+    const auth = { Authorization: `Bearer ${token}` };
+    async function loadRecordings() {
+      try {
+        const data: Recording[] = await fetch("/api/v1/recordings", { headers: auth }).then((r) => r.json());
         setRecordings(data);
         setRecordingsLoading(false);
-      })
-      .catch(() => setRecordingsLoading(false));
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    fetchRecordings();
-    const id = setInterval(fetchRecordings, 3000);
-    return () => clearInterval(id);
-  }, [fetchRecordings]);
-
-  const fetchSummaries = useCallback(() => {
-    fetch("/api/v1/summaries", { headers: authHeader })
-      .then((r) => r.json())
-      .then((data) => {
-        setSummaries(data);
-        setSummariesLoading(false);
-      })
-      .catch(() => setSummariesLoading(false));
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    fetchSummaries();
-  }, [fetchSummaries]);
-
-  async function handleGenerate() {
-    setGenerating(true);
-    try {
-      const res = await fetch("/api/v1/summaries/generate", { method: "POST", headers: authHeader });
-      if (res.status === 409) {
-        await fetch("/api/v1/summaries/regenerate", { method: "POST", headers: authHeader });
+        const ready = data.filter((r) => r.status === "ready");
+        const counts = await Promise.all(
+          ready.map(async (r) => {
+            const items: Item[] = await fetch(`/api/v1/recordings/${r.id}/items`, { headers: auth })
+              .then((res) => res.json()).catch(() => []);
+            return [r.id, {
+              pending: items.filter((i) => i.status === "pending").length,
+              kept: items.filter((i) => i.status === "approved").length,
+            }] as [string, { pending: number; kept: number }];
+          })
+        );
+        setItemCountsMap(Object.fromEntries(counts));
+      } catch {
+        setRecordingsLoading(false);
       }
-      setTimeout(fetchSummaries, 3000);
-    } finally {
-      setGenerating(false);
     }
-  }
+    void loadRecordings();
+    const id = setInterval(() => void loadRecordings(), 3000);
+    return () => clearInterval(id);
+  }, [token, refreshTick]);
+
+  useEffect(() => {
+    const auth = { Authorization: `Bearer ${token}` };
+    fetch("/api/v1/summaries", { headers: auth })
+      .then((r) => r.json())
+      .then((data) => { setSummaries(data); setSummariesLoading(false); })
+      .catch(() => setSummariesLoading(false));
+  }, [token]);
 
   async function startRecording() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -259,7 +260,7 @@ export function RecordPage({ token, onNavigateReview }: RecordPageProps) {
         const body = await res.json().catch(() => null);
         setUploadError(body?.detail ?? `Upload failed (${res.status})`);
       } else {
-        fetchRecordings();
+        triggerRefresh();
       }
     } catch {
       setUploadError("Upload failed — check your connection");
@@ -276,11 +277,11 @@ export function RecordPage({ token, onNavigateReview }: RecordPageProps) {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       {/* Header */}
-      <p className="text-xs text-gray-400 font-medium mb-1">{today}</p>
-      <h1 className="text-2xl font-black text-[#15161A] mb-1" style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}>
-        What&rsquo;s on your mind? Just blurt it.
+      <p className="text-xs text-gray-400 font-medium mb-2">{today}</p>
+      <h1 className="text-[2.5rem] leading-tight font-black text-[#15161A] mb-2" style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}>
+        What&rsquo;s on your mind?<br />Just blurt it.
       </h1>
-      <p className="text-sm text-gray-500 mb-8">
+      <p className="text-sm text-gray-500 mb-8 max-w-lg">
         Talk for a minute. Blurt splits it into items and files each one. Nothing is saved until you approve it.
       </p>
 
@@ -348,7 +349,7 @@ export function RecordPage({ token, onNavigateReview }: RecordPageProps) {
                     const body = await res.json().catch(() => null);
                     setUploadError(body?.detail ?? `Upload failed (${res.status})`);
                   } else {
-                    fetchRecordings();
+                    triggerRefresh();
                   }
                 } catch {
                   setUploadError("Upload failed — check your connection");
@@ -365,8 +366,6 @@ export function RecordPage({ token, onNavigateReview }: RecordPageProps) {
         <ThisWeekPanel
           summaries={summaries}
           loading={summariesLoading}
-          onGenerate={handleGenerate}
-          generating={generating}
           onOpenWorkLog={onNavigateReview}
         />
       </div>
@@ -385,7 +384,12 @@ export function RecordPage({ token, onNavigateReview }: RecordPageProps) {
       ) : (
         <div className="flex flex-col gap-2">
           {recordings.map((r) => (
-            <RecordingRow key={r.id} recording={r} onReview={onNavigateReview} />
+            <RecordingRow
+              key={r.id}
+              recording={r}
+              itemCounts={itemCountsMap[r.id] ?? null}
+              onReview={onNavigateReview}
+            />
           ))}
         </div>
       )}

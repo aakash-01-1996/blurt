@@ -44,6 +44,19 @@ export interface Item {
   followup_question: string | null;
 }
 
+export type TaskStatus = "open" | "done";
+
+export interface Task {
+  id: string;
+  item_id: string;
+  title: string;
+  due_date: string | null;
+  project: string | null;
+  status: TaskStatus;
+  completed_at: string | null;
+  created_at: string;
+}
+
 export type Page = "record" | "review" | "work-log" | "tasks" | "lists" | "settings";
 
 export const STATUS_COLORS: Record<RecordingStatus, string> = {

@@ -78,19 +78,35 @@ describe("RecordingRow", () => {
 
   it("offers review when items are pending", () => {
     const onReview = vi.fn();
-    render(<RecordingRow recording={rec} meta={{ pending: 5, kept: 0, firstSpan: "hi", sections: {} }} onReview={onReview} />);
+    render(<RecordingRow recording={rec} meta={{ pending: 5, kept: 0, firstSpan: "hi", sections: {} }} onReview={onReview} onDelete={vi.fn()} />);
     expect(screen.getByText("5 items to review")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Review"));
     expect(onReview).toHaveBeenCalledWith("r1");
   });
 
   it("shows a kept summary once reviewed", () => {
-    render(<RecordingRow recording={rec} meta={{ pending: 0, kept: 7, firstSpan: null, sections: {} }} onReview={vi.fn()} />);
+    render(<RecordingRow recording={rec} meta={{ pending: 0, kept: 7, firstSpan: null, sections: {} }} onReview={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText("7 items kept")).toBeInTheDocument();
   });
 
   it("shows a processing label mid-pipeline", () => {
-    render(<RecordingRow recording={{ ...rec, status: "splitting" }} meta={null} onReview={vi.fn()} />);
+    render(<RecordingRow recording={{ ...rec, status: "splitting" }} meta={null} onReview={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText("Processing: splitting into items")).toBeInTheDocument();
+  });
+
+  it("deletes after confirmation", () => {
+    const onDelete = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<RecordingRow recording={rec} meta={{ pending: 0, kept: 1, firstSpan: null, sections: {} }} onReview={vi.fn()} onDelete={onDelete} />);
+    fireEvent.click(screen.getByLabelText("Delete recording"));
+    expect(onDelete).toHaveBeenCalledWith("r1");
+  });
+
+  it("does not delete when confirmation is declined", () => {
+    const onDelete = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<RecordingRow recording={rec} meta={null} onReview={vi.fn()} onDelete={onDelete} />);
+    fireEvent.click(screen.getByLabelText("Delete recording"));
+    expect(onDelete).not.toHaveBeenCalled();
   });
 });

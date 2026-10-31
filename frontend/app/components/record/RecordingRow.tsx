@@ -17,9 +17,10 @@ interface RecordingRowProps {
   recording: Recording;
   meta: RecMeta | null;
   onReview: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export function RecordingRow({ recording, meta, onReview }: RecordingRowProps) {
+export function RecordingRow({ recording, meta, onReview, onDelete }: RecordingRowProps) {
   const dateLabel = formatDateTimeLabel(new Date(recording.created_at));
   const dur = formatDuration(recording.duration_s);
   const descriptor = meta?.firstSpan ? truncate(meta.firstSpan, 38) : null;
@@ -75,6 +76,19 @@ export function RecordingRow({ recording, meta, onReview }: RecordingRowProps) {
             Failed
           </span>
         )}
+        <button
+          onClick={() => {
+            if (window.confirm("Delete this recording and everything from it? This can't be undone.")) {
+              onDelete(recording.id);
+            }
+          }}
+          aria-label="Delete recording"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-[#FF3B30] hover:bg-red-50 transition"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2.5 4h11M6 4V2.8A.8.8 0 0 1 6.8 2h2.4a.8.8 0 0 1 .8.8V4M12.5 4l-.6 8.3a1 1 0 0 1-1 .9H5.1a1 1 0 0 1-1-.9L3.5 4M6.5 7v3.5M9.5 7v3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ class RoutingMetrics:
     accuracy: float
     per_class: dict[str, ClassScore]
     confusion: dict[str, dict[str, int]]
+    failures: list[dict[str, str]] = field(default_factory=list)
 
 
 def routing_metrics(outcomes: list[RoutingOutcome]) -> RoutingMetrics:
@@ -60,6 +61,7 @@ def routing_metrics(outcomes: list[RoutingOutcome]) -> RoutingMetrics:
         accuracy=correct / total if total else 0.0,
         per_class=per_class,
         confusion={k: dict(v) for k, v in confusion.items()},
+        failures=[{"case_id": o.case_id, "error": o.error} for o in outcomes if o.error],
     )
 
 
@@ -73,6 +75,7 @@ class ExtractionMetrics:
     key_presence_rate: float
     value_match_rate: float
     missing: list[str] = field(default_factory=list)
+    failures: list[dict[str, str]] = field(default_factory=list)
 
 
 def extraction_metrics(outcomes: list[ExtractionOutcome]) -> ExtractionMetrics:
@@ -102,4 +105,5 @@ def extraction_metrics(outcomes: list[ExtractionOutcome]) -> ExtractionMetrics:
         key_presence_rate=present / expected_keys if expected_keys else 0.0,
         value_match_rate=matched / expected_keys if expected_keys else 0.0,
         missing=missing,
+        failures=[{"case_id": o.case_id, "error": o.error or ""} for o in outcomes if o.error],
     )

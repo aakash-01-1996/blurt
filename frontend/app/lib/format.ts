@@ -31,6 +31,10 @@ export function formatDayLabel(d: Date): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+export function formatDueDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
 export function formatDateTimeLabel(d: Date): string {
   const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   if (isToday(d)) return `Today, ${time}`;

@@ -86,6 +86,9 @@ describe("AppShell", () => {
     expect(await screen.findByRole("heading", { name: "Work log" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Tasks" }));
+    expect(await screen.findByRole("heading", { name: "Tasks" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(screen.getByText(/coming soon/)).toBeInTheDocument();
   });
 });

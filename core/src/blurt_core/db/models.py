@@ -55,6 +55,11 @@ class CorrectionKind(enum.StrEnum):
     reject = "reject"
 
 
+class TaskStatus(enum.StrEnum):
+    open = "open"
+    done = "done"
+
+
 # ── Models ───────────────────────────────────────────────────────────────────
 
 
@@ -68,6 +73,7 @@ class User(Base):
 
     recordings: Mapped[list["Recording"]] = relationship(back_populates="user")
     work_log_entries: Mapped[list["WorkLogEntry"]] = relationship(back_populates="user")
+    tasks: Mapped[list["Task"]] = relationship(back_populates="user")
     weekly_summaries: Mapped[list["WeeklySummary"]] = relationship(back_populates="user")
 
 
@@ -134,6 +140,7 @@ class Item(Base):
     work_log_entry: Mapped["WorkLogEntry | None"] = relationship(
         back_populates="item", uselist=False
     )
+    task: Mapped["Task | None"] = relationship(back_populates="item", uselist=False)
     corrections: Mapped[list["Correction"]] = relationship(back_populates="item")
 
     __table_args__ = (Index("ix_items_recording_id", "recording_id"),)
@@ -153,6 +160,27 @@ class WorkLogEntry(Base):
 
     user: Mapped["User"] = relationship(back_populates="work_log_entries")
     item: Mapped["Item"] = relationship(back_populates="work_log_entry")
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.id"), nullable=False, unique=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    project: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[TaskStatus] = mapped_column(
+        Enum(TaskStatus), nullable=False, default=TaskStatus.open
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="tasks")
+    item: Mapped["Item"] = relationship(back_populates="task")
+
+    __table_args__ = (Index("ix_tasks_user_id", "user_id"),)
 
 
 class Correction(Base):

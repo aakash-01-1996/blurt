@@ -7,6 +7,7 @@ from blurt_core.db.models import (
     Item,
     ItemStatus,
     Recording,
+    Task,
     WorkLogEntry,
 )
 from blurt_core.db.session import get_session
@@ -81,6 +82,8 @@ def review_item(item_id: uuid.UUID, body: ReviewRequest, user_id: CurrentUserId)
 
         if body.action == "approve" and item.section == "work_log" and item.fields:
             _create_work_log_entry(session, item)
+        if body.action == "approve" and item.section == "task":
+            _create_task(session, item)
 
         session.flush()
         session.expunge(item)
@@ -116,6 +119,36 @@ def _create_work_log_entry(session: object, item: Item) -> None:
         occurred_on=occurred_on,
     )
     session.add(entry)
+
+
+def _create_task(session: object, item: Item) -> None:
+    from sqlalchemy.orm import Session as SASession
+
+    assert isinstance(session, SASession)
+
+    recording = session.get(Recording, item.recording_id)
+    user_id = recording.user_id if recording else None
+    if user_id is None:
+        return
+
+    fields = item.fields or {}
+
+    due_date: datetime | None = None
+    raw_due = fields.get("due_date")
+    if raw_due:
+        try:
+            due_date = datetime.fromisoformat(raw_due).replace(tzinfo=UTC)
+        except ValueError:
+            pass
+
+    task = Task(
+        user_id=user_id,
+        item_id=item.id,
+        title=fields.get("title") or item.span_text,
+        due_date=due_date,
+        project=fields.get("project"),
+    )
+    session.add(task)
 
 
 @router.patch("/items/{item_id}", response_model=ItemOut)

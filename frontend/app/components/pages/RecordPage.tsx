@@ -26,6 +26,14 @@ export function RecordPage({ token, onNavigateReview }: RecordPageProps) {
 
   const recorder = useRecorder({ token, onUploaded: () => setRefreshTick((n) => n + 1) });
 
+  async function handleDelete(id: string) {
+    setRecordings((prev) => prev.filter((r) => r.id !== id));
+    await fetch(`/api/v1/recordings/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => setRefreshTick((n) => n + 1));
+  }
+
   useEffect(() => {
     const auth = { Authorization: `Bearer ${token}` };
     async function loadRecordings() {
@@ -111,7 +119,13 @@ export function RecordPage({ token, onNavigateReview }: RecordPageProps) {
       ) : (
         <div className="flex flex-col gap-2.5">
           {recordings.map((r) => (
-            <RecordingRow key={r.id} recording={r} meta={metaMap[r.id] ?? null} onReview={onNavigateReview} />
+            <RecordingRow
+              key={r.id}
+              recording={r}
+              meta={metaMap[r.id] ?? null}
+              onReview={onNavigateReview}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}

@@ -1,4 +1,4 @@
 {
-  "routing_accuracy": 0.8,
-  "extraction_key_presence": 0.7
+  "routing_accuracy": 0.85,
+  "extraction_key_presence": 0.85
 }

@@ -26,7 +26,7 @@ export function ShimmerText({ lines = 1, className = "" }: { lines?: number; cla
 
 export function ShimmerCard({ className = "" }: { className?: string }) {
   return (
-    <div className={`bg-white rounded-2xl p-4 flex flex-col gap-3 ${className}`}>
+    <div className={`bg-surface rounded-2xl p-4 flex flex-col gap-3 ${className}`}>
       <div className="flex items-center gap-2">
         <ShimmerBox className="h-5 w-16 rounded-full" />
         <ShimmerBox className="h-4 w-24" />
@@ -42,7 +42,7 @@ export function ShimmerCard({ className = "" }: { className?: string }) {
 
 export function ShimmerRow({ className = "" }: { className?: string }) {
   return (
-    <div className={`bg-white rounded-2xl p-4 flex items-center justify-between ${className}`}>
+    <div className={`bg-surface rounded-2xl p-4 flex items-center justify-between ${className}`}>
       <div className="flex flex-col gap-2">
         <ShimmerBox className="h-4 w-32" />
         <ShimmerBox className="h-3 w-20" />

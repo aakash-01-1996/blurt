@@ -1,149 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Item, Recording, SECTION_COLORS, SECTION_LABELS } from "../../types";
-import { ShimmerCard } from "../Shimmer";
-
-type FilterSection = "all" | "work_log" | "task" | "note" | "unsorted";
-
-function ConfidenceBadge({ confidence }: { confidence: number | null }) {
-  if (confidence === null) return null;
-  const label = confidence >= 0.85 ? "High confidence" : confidence >= 0.6 ? "Medium confidence" : "Low confidence";
-  const color = confidence >= 0.85 ? "text-green-600" : confidence >= 0.6 ? "text-amber-600" : "text-red-600";
-  return <span className={`text-xs font-medium ${color}`}>{label}</span>;
-}
-
-function ReviewItemCard({
-  item,
-  onReview,
-  onPatch,
-}: {
-  item: Item;
-  onReview: (id: string, action: "approve" | "reject") => void;
-  onPatch: (id: string, fields: Record<string, string>) => Promise<void>;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
-  const reviewed = item.status !== "pending";
-
-  function startEdit() {
-    setDraft(Object.fromEntries(Object.entries(item.fields ?? {}).map(([k, v]) => [k, v])));
-    setEditing(true);
-  }
-
-  async function saveEdit() {
-    setSaving(true);
-    try {
-      await onPatch(item.id, draft);
-      setEditing(false);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className={`bg-white rounded-2xl p-5 flex flex-col gap-4 transition-opacity ${reviewed && item.status !== "approved" ? "opacity-50" : ""}`}>
-      {/* Header */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${SECTION_COLORS[item.section] ?? "bg-gray-100 text-gray-600"}`}>
-          {SECTION_LABELS[item.section] ?? item.section}
-        </span>
-        <ConfidenceBadge confidence={item.route_confidence} />
-        {reviewed && (
-          <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${item.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-            {item.status}
-          </span>
-        )}
-      </div>
-
-      {/* Title — first field or span_text */}
-      <h3 className="text-base font-bold text-[#15161A] leading-snug -mt-1">
-        {item.fields?.accomplishment ?? item.fields?.title ?? item.span_text}
-      </h3>
-
-      {/* Fields */}
-      {item.fields && Object.keys(item.fields).length > 0 && !editing && (
-        <dl className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-1.5 text-sm">
-          {Object.entries(item.fields).map(([k, v]) => (
-            <>
-              <dt key={`k-${k}`} className="text-gray-400 font-medium capitalize">{k.replace(/_/g, " ")}</dt>
-              <dd key={`v-${k}`} className="text-gray-700">{v || <span className="text-gray-300 italic">Not mentioned</span>}</dd>
-            </>
-          ))}
-        </dl>
-      )}
-
-      {/* Inline edit */}
-      {editing && (
-        <div className="flex flex-col gap-2">
-          {Object.entries(draft).map(([k, v]) => (
-            <div key={k} className="flex flex-col gap-0.5">
-              <label className="text-xs text-gray-400 font-medium capitalize">{k.replace(/_/g, " ")}</label>
-              <input
-                className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#4B3FE0]/30"
-                value={v}
-                onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
-              />
-            </div>
-          ))}
-          <div className="flex gap-2 pt-1">
-            <button onClick={saveEdit} disabled={saving}
-              className="flex-1 text-sm font-semibold py-1.5 rounded-lg bg-[#4B3FE0] text-white hover:brightness-110 transition disabled:opacity-50">
-              {saving ? "Saving…" : "Save"}
-            </button>
-            <button onClick={() => setEditing(false)} disabled={saving}
-              className="flex-1 text-sm font-semibold py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Audio snippet */}
-      <div className="bg-gray-50 rounded-xl px-3 py-2.5 flex items-start gap-2.5 -mt-1">
-        <span className="text-[10px] font-mono text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 shrink-0 mt-0.5">
-          ▶
-        </span>
-        <p className="text-xs text-gray-500 italic leading-relaxed">
-          &ldquo;{item.span_text}&rdquo;
-        </p>
-      </div>
-
-      {/* Actions */}
-      {!reviewed && !editing && (
-        <div className="flex gap-2 pt-1 flex-wrap">
-          <button
-            onClick={() => onReview(item.id, "approve")}
-            className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#15161A] text-white hover:bg-[#2d2f36] transition"
-          >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M2 6.5l3 3L11 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Approve
-          </button>
-          <button onClick={startEdit}
-            className="text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-[#15161A] hover:bg-gray-50 transition">
-            Edit
-          </button>
-          <button className="text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-[#15161A] hover:bg-gray-50 transition">
-            Move to…
-          </button>
-          <button
-            onClick={() => onReview(item.id, "reject")}
-            className="text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-red-500 transition ml-auto">
-            Reject
-          </button>
-        </div>
-      )}
-      {reviewed && item.status === "approved" && !editing && (
-        <button onClick={startEdit} className="text-xs text-gray-400 hover:text-gray-600 transition self-start">
-          Edit
-        </button>
-      )}
-    </div>
-  );
-}
+import { useEffect, useMemo, useState } from "react";
+import { Item, Recording } from "../../types";
+import { deriveTimestamps } from "../../lib/derive";
+import { fmtTime } from "../../lib/format";
+import { ShimmerBox, ShimmerCard } from "../Shimmer";
+import { TranscriptPanel } from "../review/TranscriptPanel";
+import { ReviewItemCard } from "../review/ReviewItemCard";
+import { FilterSection, ReviewFilters } from "../review/ReviewFilters";
 
 interface ReviewPageProps {
   token: string;
@@ -156,6 +20,7 @@ export function ReviewPage({ token, onCountChange }: ReviewPageProps) {
   const [itemsMap, setItemsMap] = useState<Record<string, Item[]>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterSection>("all");
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -169,50 +34,45 @@ export function ReviewPage({ token, onCountChange }: ReviewPageProps) {
       const entries = await Promise.all(
         ready.map(async (r) => {
           const items: Item[] = await fetch(`/api/v1/recordings/${r.id}/items`, { headers: auth })
-            .then((res) => res.json())
-            .catch(() => []);
+            .then((res) => res.json()).catch(() => []);
           return [r.id, items] as [string, Item[]];
         })
       );
       if (cancelled) return;
-
       const map = Object.fromEntries(entries);
       setItemsMap(map);
-      const pending = Object.values(map).flat().filter((i) => i.status === "pending").length;
-      onCountChange(pending);
+      onCountChange(Object.values(map).flat().filter((i) => i.status === "pending").length);
       setLoading(false);
     }
     void fetchAll();
     return () => { cancelled = true; };
   }, [token, onCountChange]);
 
-  const allItems = recordings.flatMap((r) => (itemsMap[r.id] ?? []).map((item) => ({ item, recordingId: r.id })));
+  // Focus on one recording: most recent with pending items, else most recent.
+  const active = useMemo(() => {
+    const withPending = recordings.find((r) => (itemsMap[r.id] ?? []).some((i) => i.status === "pending"));
+    return withPending ?? recordings[0] ?? null;
+  }, [recordings, itemsMap]);
 
-  const filtered = filter === "all"
-    ? allItems
-    : filter === "unsorted"
-      ? allItems.filter(({ item }) => !item.section || item.section === "unsorted")
-      : allItems.filter(({ item }) => item.section === filter);
+  const items = useMemo(() => (active ? (itemsMap[active.id] ?? []) : []), [active, itemsMap]);
+  const timestamps = useMemo(() => deriveTimestamps(items, active?.duration_s ?? null), [items, active]);
 
-  const pendingCount = allItems.filter(({ item }) => item.status === "pending").length;
-
-  const sectionCounts: Record<FilterSection, number> = {
-    all: allItems.length,
-    work_log: allItems.filter(({ item }) => item.section === "work_log").length,
-    task: allItems.filter(({ item }) => item.section === "task").length,
-    note: allItems.filter(({ item }) => item.section === "note").length,
-    unsorted: allItems.filter(({ item }) => !item.section || item.section === "unsorted").length,
+  const counts: Record<FilterSection, number> = {
+    all: items.length,
+    work_log: items.filter((i) => i.section === "work_log").length,
+    task: items.filter((i) => i.section === "task").length,
+    list: items.filter((i) => i.section === "list").length,
+    unsorted: items.filter((i) => !i.section || i.section === "unsorted").length,
   };
 
-  const FILTERS: { key: FilterSection; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "work_log", label: "Work log" },
-    { key: "task", label: "Tasks" },
-    { key: "note", label: "Notes" },
-    { key: "unsorted", label: "Unsorted" },
-  ];
+  const visible = items
+    .filter((i) => !dismissed.has(i.id))
+    .filter((i) => filter === "all" || (filter === "unsorted" ? (!i.section || i.section === "unsorted") : i.section === filter));
 
-  async function handleReview(itemId: string, action: "approve" | "reject", recordingId: string) {
+  const pendingCount = items.filter((i) => i.status === "pending").length;
+
+  async function handleReview(itemId: string, action: "approve" | "reject") {
+    if (!active) return;
     const res = await fetch(`/api/v1/items/${itemId}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeader },
@@ -220,16 +80,15 @@ export function ReviewPage({ token, onCountChange }: ReviewPageProps) {
     });
     if (!res.ok) return;
     const updated: Item = await res.json();
-    setItemsMap((prev) => ({
-      ...prev,
-      [recordingId]: (prev[recordingId] ?? []).map((i) => (i.id === itemId ? updated : i)),
-    }));
-    const newPending = Object.values({ ...itemsMap, [recordingId]: (itemsMap[recordingId] ?? []).map((i) => (i.id === itemId ? updated : i)) })
-      .flat().filter((i) => i.status === "pending").length;
-    onCountChange(newPending);
+    setItemsMap((prev) => {
+      const next = { ...prev, [active.id]: (prev[active.id] ?? []).map((i) => (i.id === itemId ? updated : i)) };
+      onCountChange(Object.values(next).flat().filter((i) => i.status === "pending").length);
+      return next;
+    });
   }
 
-  async function handlePatch(itemId: string, fields: Record<string, string>, recordingId: string) {
+  async function handlePatch(itemId: string, fields: Record<string, string>) {
+    if (!active) return;
     const res = await fetch(`/api/v1/items/${itemId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...authHeader },
@@ -239,75 +98,77 @@ export function ReviewPage({ token, onCountChange }: ReviewPageProps) {
     const updated: Item = await res.json();
     setItemsMap((prev) => ({
       ...prev,
-      [recordingId]: (prev[recordingId] ?? []).map((i) => (i.id === itemId ? updated : i)),
+      [active.id]: (prev[active.id] ?? []).map((i) => (i.id === itemId ? updated : i)),
     }));
   }
 
+  const sub = active ? buildSubtitle(active, pendingCount, items.length) : "";
+
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-1">
-        <h1 className="text-2xl font-black text-[#15161A]" style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}>
-          Review inbox
-        </h1>
-        <span className="text-xs text-gray-400 flex items-center gap-1.5 mt-1.5">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M6 1L1.5 3v3.5C1.5 9 3.5 11 6 11c2.5 0 4.5-2 4.5-4.5V3L6 1z" stroke="#9CA3AF" strokeWidth="1.2" strokeLinejoin="round" />
+    <div className="px-6 sm:px-10 lg:px-12 py-10 max-w-[1280px]">
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <div>
+          <h1 className="font-display text-4xl font-bold text-[#1D1D1F]">Review inbox</h1>
+          {!loading && active && <p className="text-base text-gray-400 mt-1.5">{sub}</p>}
+        </div>
+        <span className="text-sm text-gray-400 flex items-center gap-1.5 mt-2 shrink-0">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1L2 3v4c0 3 2.2 5 5 6 2.8-1 5-3 5-6V3L7 1z" stroke="#9CA3AF" strokeWidth="1.2" strokeLinejoin="round" />
           </svg>
           Nothing is saved until you approve it.
         </span>
       </div>
-      {!loading && pendingCount > 0 && (
-        <p className="text-sm text-gray-500 mb-5">{pendingCount} item{pendingCount !== 1 ? "s" : ""} to review</p>
-      )}
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 mb-6 flex-wrap">
-        {FILTERS.filter(({ key }) => sectionCounts[key] > 0 || key === "all").map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setFilter(key)}
-            className={`text-sm font-semibold px-3 py-1.5 rounded-full transition ${
-              filter === key
-                ? "bg-[#15161A] text-white"
-                : "bg-white text-[#5C5F6A] hover:bg-gray-100 border border-gray-200"
-            }`}
-          >
-            {label}
-            {sectionCounts[key] > 0 && (
-              <span className={`ml-1.5 text-xs ${filter === key ? "text-white/70" : "text-gray-400"}`}>
-                · {sectionCounts[key]}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      {!loading && <ReviewFilters counts={counts} value={filter} onChange={setFilter} />}
 
-      {/* Items */}
       {loading ? (
-        <div className="flex flex-col gap-3">
-          {[0, 1, 2].map((i) => <ShimmerCard key={i} />)}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,420px)_1fr] gap-6">
+          <ShimmerBox className="h-96 w-full rounded-3xl" />
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2].map((i) => <ShimmerCard key={i} />)}
+          </div>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-2">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="14" stroke="#E5E7EB" strokeWidth="2" />
-            <path d="M10 16l4 4 8-8" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      ) : !active || items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-3">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <circle cx="18" cy="18" r="15" stroke="#E5E7EB" strokeWidth="2" />
+            <path d="M11 18l4.5 4.5L25 13" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <p className="text-sm text-gray-400">All caught up — nothing to review.</p>
+          <p className="text-base text-gray-400">All caught up — nothing to review.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {filtered.map(({ item, recordingId }) => (
-            <ReviewItemCard
-              key={item.id}
-              item={item}
-              onReview={(id, action) => handleReview(id, action, recordingId)}
-              onPatch={(id, fields) => handlePatch(id, fields, recordingId)}
-            />
-          ))}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,420px)_1fr] gap-6 items-start">
+          <div className="lg:sticky lg:top-6">
+            <TranscriptPanel items={items} recording={active} token={token} timestamps={timestamps} />
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {visible.length === 0 ? (
+              <p className="text-base text-gray-400 py-8 text-center">Nothing in this section.</p>
+            ) : (
+              visible.map((item) => (
+                <ReviewItemCard
+                  key={item.id}
+                  item={item}
+                  ts={timestamps[item.id] ?? 0}
+                  onReview={handleReview}
+                  onPatch={handlePatch}
+                  onDismiss={(id) => setDismissed((prev) => new Set(prev).add(id))}
+                />
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+function buildSubtitle(active: Recording, pending: number, total: number): string {
+  const d = new Date(active.created_at);
+  const isToday = d.toDateString() === new Date().toDateString();
+  const dayLabel = isToday ? "today" : d.toLocaleDateString("en-US", { weekday: "long" });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const dur = active.duration_s ? fmtTime(active.duration_s) : "—";
+  return `From your blurt ${dayLabel} at ${time} · ${dur} · ${pending} of ${total} left to review`;
 }

@@ -32,4 +32,4 @@ module = "mlx_whisper"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["core/tests", "backend/api/tests", "backend/worker/tests"]
+testpaths = ["core/tests", "backend/api/tests", "backend/worker/tests", "evals/tests"]

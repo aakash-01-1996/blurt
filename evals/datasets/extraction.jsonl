@@ -1,0 +1,10 @@
+# Extraction eval cases: section + text -> expected fields. Key presence is the
+# primary signal; value match is the stricter secondary signal.
+{"id": "e-wl-1", "section": "work_log", "text": "I shipped the retry fix in the upload service, and failures are down about thirty percent.", "expected_fields": {"accomplishment": "Shipped the retry fix in the upload service", "impact": "Failures down about 30%", "project": "upload service"}}
+{"id": "e-wl-2", "section": "work_log", "text": "Fixed a timezone bug in the weekly reports; it closed three support tickets.", "expected_fields": {"accomplishment": "Fixed a timezone bug in the weekly reports", "project": "reports"}}
+{"id": "e-wl-3", "section": "work_log", "text": "Paired with a new teammate on the deploy pipeline and their first deploy shipped the same day.", "expected_fields": {"accomplishment": "Paired with a new teammate on the deploy pipeline", "project": "deploy pipeline"}}
+{"id": "e-tk-1", "section": "task", "text": "I need to call the dentist on Tuesday at three.", "expected_fields": {"title": "Call the dentist"}}
+{"id": "e-tk-2", "section": "task", "text": "Remind me to renew the SSL certificate for the api project next week.", "expected_fields": {"title": "Renew the SSL certificate", "project": "api"}}
+{"id": "e-tk-3", "section": "task", "text": "Follow up with the vendor about pricing before Friday.", "expected_fields": {"title": "Follow up with the vendor about pricing"}}
+{"id": "e-nt-1", "section": "note", "text": "The new API rate limit is one hundred requests per minute.", "expected_fields": {"title": "API rate limit", "content": "The new API rate limit is 100 requests per minute."}}
+{"id": "e-nt-2", "section": "note", "text": "Idea: cache the user profile to cut latency on the dashboard.", "expected_fields": {"title": "Cache the user profile"}}

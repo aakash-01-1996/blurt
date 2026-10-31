@@ -17,6 +17,16 @@ class LlmClient:
         self.model = model
         self.provider = provider
 
+    def complete(self, messages: list[Any], *, temperature: float = 0.0) -> str:
+        """DB-free completion for offline callers such as evals; logs no LlmCall."""
+        from openai import OpenAI
+
+        client = OpenAI(base_url=self._base_url, api_key=self._api_key)
+        response = client.chat.completions.create(
+            model=self.model, messages=messages, temperature=temperature
+        )
+        return response.choices[0].message.content or ""
+
     def chat(
         self,
         messages: list[Any],

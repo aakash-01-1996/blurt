@@ -6,43 +6,16 @@ from blurt_core.config import settings
 from blurt_core.db.models import Item, ItemStatus, Job, Recording, RecordingStatus
 from blurt_core.db.session import get_session
 from blurt_core.logging import job_id_var, recording_id_var
+from blurt_core.pipeline.extraction import (
+    EXTRACT_PROMPT_VERSION,
+    build_extract_messages,
+    parse_extract_response,
+)
 from blurt_core.providers.llm import build_llm_client
 
 logger = logging.getLogger(__name__)
 
 llm = build_llm_client(settings)
-
-_PROMPT_VERSION = "1"
-
-_SYSTEM_BY_SECTION: dict[str, str] = {
-    "work_log": """\
-Extract structured fields from this work-log voice note.
-
-Return a JSON object with these keys (omit a key if not mentioned):
-  "accomplishment": string — what was done
-  "impact":         string — why it mattered or the outcome
-  "project":        string — project or area name
-  "occurred_on":    string — ISO 8601 date if mentioned (e.g. "2024-03-15"), else omit
-
-Return ONLY the JSON object, no markdown fences.""",
-    "task": """\
-Extract structured fields from this task voice note.
-
-Return a JSON object with these keys (omit a key if not mentioned):
-  "title":    string — short description of the task
-  "due_date": string — ISO 8601 date if mentioned, else omit
-  "project":  string — project or area name if mentioned
-
-Return ONLY the JSON object, no markdown fences.""",
-    "note": """\
-Extract structured fields from this note voice note.
-
-Return a JSON object with these keys (omit a key if not mentioned):
-  "title":   string — short summary (one sentence)
-  "content": string — the full note text, cleaned up
-
-Return ONLY the JSON object, no markdown fences.""",
-}
 
 
 def _all_items_done(session: object, recording_id: uuid.UUID) -> bool:
@@ -78,8 +51,8 @@ def handle_extract(job: Job) -> None:
         section = item.section
         span_text = item.span_text
 
-    system_prompt = _SYSTEM_BY_SECTION.get(section)
-    if system_prompt is None:
+    messages = build_extract_messages(section, span_text)
+    if messages is None:
         with get_session() as session:
             item = session.get(Item, item_id)
             if item:
@@ -89,22 +62,14 @@ def handle_extract(job: Job) -> None:
 
     with get_session() as session:
         raw = llm.chat(
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": span_text},
-            ],
+            messages,
             session=session,
             job_id=job.id,
             stage="extract",
-            prompt_version=_PROMPT_VERSION,
+            prompt_version=EXTRACT_PROMPT_VERSION,
         )
 
-    try:
-        fields: dict[str, str] = json.loads(raw)
-        if not isinstance(fields, dict):
-            raise ValueError("expected a JSON object")
-    except Exception as exc:
-        raise ValueError(f"extract LLM returned invalid JSON: {raw!r}") from exc
+    fields = parse_extract_response(raw)
 
     with get_session() as session:
         item = session.get(Item, item_id)

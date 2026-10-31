@@ -35,6 +35,7 @@ def build_report(routing: RoutingMetrics, extraction: ExtractionMetrics) -> dict
             "accuracy": routing.accuracy,
             "per_class": {k: asdict(v) for k, v in routing.per_class.items()},
             "confusion": routing.confusion,
+            "failures": routing.failures,
         },
         "extraction": asdict(extraction),
     }

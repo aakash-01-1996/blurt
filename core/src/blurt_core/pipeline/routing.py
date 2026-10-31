@@ -1,7 +1,8 @@
 """Routing (section classification) prompt and response parsing."""
 
-import json
 from dataclasses import dataclass
+
+from blurt_core.pipeline.parsing import loads_lenient
 
 ROUTE_PROMPT_VERSION = "1"
 
@@ -38,10 +39,10 @@ def build_route_messages(text: str) -> list[dict[str, str]]:
 
 def parse_route_response(raw: str) -> RouteResult:
     try:
-        data = json.loads(raw)
+        data = loads_lenient(raw)
         section = str(data.get("section", "")).strip()
         confidence = float(data.get("confidence", 0.0))
-    except Exception as exc:
+    except (ValueError, AttributeError, TypeError) as exc:
         raise ValueError(f"route LLM returned invalid JSON: {raw!r}") from exc
     if section not in VALID_SECTIONS:
         raise ValueError(f"unexpected section: {section!r}")

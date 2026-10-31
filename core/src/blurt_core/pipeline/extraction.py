@@ -1,6 +1,6 @@
 """Field-extraction prompts (per section) and response parsing."""
 
-import json
+from blurt_core.pipeline.parsing import loads_lenient
 
 EXTRACT_PROMPT_VERSION = "1"
 
@@ -47,8 +47,8 @@ def build_extract_messages(section: str, text: str) -> list[dict[str, str]] | No
 
 def parse_extract_response(raw: str) -> dict[str, str]:
     try:
-        fields = json.loads(raw)
-    except Exception as exc:
+        fields = loads_lenient(raw)
+    except ValueError as exc:
         raise ValueError(f"extract LLM returned invalid JSON: {raw!r}") from exc
     if not isinstance(fields, dict):
         raise ValueError("expected a JSON object")

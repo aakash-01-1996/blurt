@@ -35,7 +35,12 @@ class Settings(BaseSettings):
     # Auth
     jwt_secret: str = "dev-secret-change-in-production"
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
+    jwt_expire_minutes: int = 60 * 8  # 8 hours
+
+    # WebAuthn / passkeys
+    webauthn_rp_id: str = "localhost"
+    webauthn_rp_name: str = "Blurt"
+    webauthn_origin: str = "http://localhost:5200"  # the dev frontend origin
 
     # Frontend
     api_internal_url: str = "http://localhost:8000"

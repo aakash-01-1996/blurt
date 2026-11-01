@@ -1,10 +1,8 @@
 # Blurt-AI
-
-> Blurt-AI turns voice notes into organized and reviewable records.
+Blurt-AI turns voice notes into organized and reviewable records.
 
 ## Snapshots
-
-_Coming soon._
+<img src="image-1.png" alt="Homepage" width="720" />
 
 ## Architecture
 
@@ -25,17 +23,8 @@ flowchart LR
 
 ## Tech Stack
 
-### Frontend
-- TypeScript, Next.js, Tailwind CSS
-
-### Backend
-- Python, FastAPI, SQLAlchemy, JWT
-
-### Database
-- PostgreSQL
-
-### Infra
-- Docker, Kubernetes, CI/CD, Cloudflare R2
-
-### Eval & AI
-- Speech-to-text (OpenAI Whisper), LLM (OpenAI)
+### Frontend: TypeScript, Next.js, Tailwind CSS
+### Backend : Python, FastAPI, SQLAlchemy, JWT
+### Database: PostgreSQL
+### Infra: Docker, Kubernetes, CI/CD, Cloudflare R2
+### Eval & AI: Speech-to-text (OpenAI Whisper), LLM (OpenAI)

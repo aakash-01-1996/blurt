@@ -82,6 +82,13 @@ export interface List {
   items: ListItem[];
 }
 
+export interface PasskeyCredential {
+  id: string;
+  label: string | null;
+  created_at: string;
+  last_used_at: string | null;
+}
+
 export type Page = "record" | "review" | "work-log" | "tasks" | "notes" | "lists" | "settings";
 
 export const STATUS_COLORS: Record<RecordingStatus, string> = {

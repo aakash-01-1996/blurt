@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     func,
@@ -72,11 +73,32 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     recordings: Mapped[list["Recording"]] = relationship(back_populates="user")
+    credentials: Mapped[list["Credential"]] = relationship(back_populates="user")
     work_log_entries: Mapped[list["WorkLogEntry"]] = relationship(back_populates="user")
     tasks: Mapped[list["Task"]] = relationship(back_populates="user")
     notes: Mapped[list["Note"]] = relationship(back_populates="user")
     lists: Mapped[list["List"]] = relationship(back_populates="user")
     weekly_summaries: Mapped[list["WeeklySummary"]] = relationship(back_populates="user")
+
+
+class Credential(Base):
+    """A registered WebAuthn/passkey credential for a user."""
+
+    __tablename__ = "credentials"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    credential_id: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
+    public_key: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    sign_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    transports: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["User"] = relationship(back_populates="credentials")
+
+    __table_args__ = (Index("ix_credentials_user_id", "user_id"),)
 
 
 class Recording(Base):

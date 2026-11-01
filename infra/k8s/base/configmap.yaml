@@ -17,3 +17,8 @@ data:
   AUDIO_RETENTION_DAYS: "14"
   MAX_UPLOAD_MB: "25"
   S3_BUCKET: "blurt-audio-dev"
+  # WebAuthn / passkeys — set these to the real deployed domain before use.
+  # RP_ID is the registrable domain (no scheme/port); ORIGIN is the full URL the browser sees.
+  WEBAUTHN_RP_ID: "blurt.example.com"
+  WEBAUTHN_RP_NAME: "Blurt"
+  WEBAUTHN_ORIGIN: "https://blurt.example.com"

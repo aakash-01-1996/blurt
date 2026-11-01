@@ -26,6 +26,8 @@ class ItemOut(BaseModel):
     status: ItemStatus
     span_text: str
     route_confidence: float | None
+    start_s: float | None
+    end_s: float | None
     fields: dict | None  # type: ignore[type-arg]
     followup_question: str | None
 

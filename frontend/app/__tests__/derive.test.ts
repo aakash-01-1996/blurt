@@ -9,7 +9,7 @@ function recordingOn(daysAgo: number): Recording {
 }
 
 function item(id: string, span: string): Item {
-  return { id, section: "work_log", status: "pending", span_text: span, route_confidence: 0.9, fields: null, followup_question: null };
+  return { id, section: "work_log", status: "pending", span_text: span, route_confidence: 0.9, start_s: null, end_s: null, fields: null, followup_question: null };
 }
 
 describe("confidenceLabel", () => {

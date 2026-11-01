@@ -37,6 +37,8 @@ def _seed_item(
         span_text="Shipped the auth refactor.",
         fields={"accomplishment": "Shipped the auth refactor", "project": "backend"},
         status=status,
+        start_s=1.5,
+        end_s=4.0,
     )
     session.add(item)
     session.flush()
@@ -60,6 +62,8 @@ def test_list_items_returns_items_for_recording(
     assert data[0]["section"] == "work_log"
     assert data[0]["span_text"] == "Shipped the auth refactor."
     assert data[0]["fields"]["project"] == "backend"
+    assert data[0]["start_s"] == 1.5
+    assert data[0]["end_s"] == 4.0
 
 
 def test_list_items_returns_empty_list_for_no_items(

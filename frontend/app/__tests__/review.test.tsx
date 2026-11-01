@@ -14,6 +14,8 @@ function mkItem(over: Partial<Item> = {}): Item {
     status: "pending",
     span_text: "I shipped the fix",
     route_confidence: 0.9,
+    start_s: null,
+    end_s: null,
     fields: { accomplishment: "Shipped fix", impact: "down 30%", project: "Upload" },
     followup_question: null,
     ...over,

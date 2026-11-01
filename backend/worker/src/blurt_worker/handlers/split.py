@@ -6,6 +6,7 @@ from blurt_core.config import settings
 from blurt_core.db.models import Item, Job, Recording, RecordingStatus, Transcript
 from blurt_core.db.session import get_session
 from blurt_core.logging import job_id_var, recording_id_var
+from blurt_core.pipeline.timing import span_time_range
 from blurt_core.providers.llm import build_llm_client
 from blurt_core.queue import enqueue
 
@@ -49,6 +50,7 @@ def handle_split(job: Job) -> None:
 
         recording.status = RecordingStatus.splitting
         transcript_text = transcript.text
+        transcript_segments = list(transcript.segments or [])
 
     with get_session() as session:
         raw = llm.chat(
@@ -79,12 +81,19 @@ def handle_split(job: Job) -> None:
             text = str(span.get("text", "")).strip()
             if not text:
                 continue
+            span_start_char = int(span["start_char"]) if "start_char" in span else None
+            span_end_char = int(span["end_char"]) if "end_char" in span else None
+            start_s, end_s = span_time_range(
+                transcript_segments, transcript_text, span_start_char, span_end_char
+            )
             item = Item(
                 recording_id=recording_id,
                 section="unknown",
                 span_text=text,
-                span_start_char=int(span["start_char"]) if "start_char" in span else None,
-                span_end_char=int(span["end_char"]) if "end_char" in span else None,
+                span_start_char=span_start_char,
+                span_end_char=span_end_char,
+                start_s=start_s,
+                end_s=end_s,
             )
             session.add(item)
             items.append(item)

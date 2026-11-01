@@ -45,6 +45,16 @@ const NAV_ITEMS: { page: Page; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
+    page: "notes",
+    label: "Notes",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h6.5l4 4V14.5A1.5 1.5 0 0 1 13.5 16h-9A1.5 1.5 0 0 1 3 14.5v-11Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M10.5 2.2V6h3.8" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     page: "lists",
     label: "Lists",
     icon: (

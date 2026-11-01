@@ -7,6 +7,7 @@ import { RecordPage } from "./pages/RecordPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { WorkLogPage } from "./pages/WorkLogPage";
 import { TasksPage } from "./pages/TasksPage";
+import { NotesPage } from "./pages/NotesPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 function PlaceholderPage({ title }: { title: string }) {
@@ -38,6 +39,7 @@ export function AppShell({ token, onLogout }: { token: string; onLogout: () => v
         )}
         {activePage === "work-log" && <WorkLogPage token={token} />}
         {activePage === "tasks" && <TasksPage token={token} />}
+        {activePage === "notes" && <NotesPage token={token} />}
         {activePage === "lists" && <PlaceholderPage title="Lists" />}
         {activePage === "settings" && <SettingsPage token={token} />}
       </main>

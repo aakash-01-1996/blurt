@@ -10,6 +10,7 @@ from sqlalchemy import text
 from blurt_api.routers.auth import router as auth_router
 from blurt_api.routers.export import router as export_router
 from blurt_api.routers.items import router as items_router
+from blurt_api.routers.notes import router as notes_router
 from blurt_api.routers.recordings import router as recordings_router
 from blurt_api.routers.summaries import router as summaries_router
 from blurt_api.routers.tasks import router as tasks_router
@@ -21,6 +22,7 @@ app = FastAPI(title="Blurt API")
 app.include_router(auth_router)
 app.include_router(recordings_router)
 app.include_router(items_router)
+app.include_router(notes_router)
 app.include_router(summaries_router)
 app.include_router(tasks_router)
 app.include_router(work_log_router)

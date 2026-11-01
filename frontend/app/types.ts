@@ -59,7 +59,15 @@ export interface Task {
   created_at: string;
 }
 
-export type Page = "record" | "review" | "work-log" | "tasks" | "lists" | "settings";
+export interface Note {
+  id: string;
+  item_id: string;
+  title: string;
+  content: string | null;
+  created_at: string;
+}
+
+export type Page = "record" | "review" | "work-log" | "tasks" | "notes" | "lists" | "settings";
 
 export const STATUS_COLORS: Record<RecordingStatus, string> = {
   uploaded: "bg-gray-100 text-gray-600",

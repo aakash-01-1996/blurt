@@ -40,3 +40,6 @@ CLAUDE.md
 
 # eval run artifacts
 evals/reports/
+
+# local working notes (never pushed)
+/BACKLOG.md

@@ -6,6 +6,7 @@ from blurt_core.db.models import (
     CorrectionKind,
     Item,
     ItemStatus,
+    Note,
     Recording,
     Task,
     WorkLogEntry,
@@ -86,6 +87,8 @@ def review_item(item_id: uuid.UUID, body: ReviewRequest, user_id: CurrentUserId)
             _create_work_log_entry(session, item)
         if body.action == "approve" and item.section == "task":
             _create_task(session, item)
+        if body.action == "approve" and item.section == "note":
+            _create_note(session, item)
 
         session.flush()
         session.expunge(item)
@@ -151,6 +154,27 @@ def _create_task(session: object, item: Item) -> None:
         project=fields.get("project"),
     )
     session.add(task)
+
+
+def _create_note(session: object, item: Item) -> None:
+    from sqlalchemy.orm import Session as SASession
+
+    assert isinstance(session, SASession)
+
+    recording = session.get(Recording, item.recording_id)
+    user_id = recording.user_id if recording else None
+    if user_id is None:
+        return
+
+    fields = item.fields or {}
+
+    note = Note(
+        user_id=user_id,
+        item_id=item.id,
+        title=fields.get("title") or item.span_text,
+        content=fields.get("content") or item.span_text,
+    )
+    session.add(note)
 
 
 @router.patch("/items/{item_id}", response_model=ItemOut)

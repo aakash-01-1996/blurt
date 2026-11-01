@@ -14,7 +14,7 @@ function setup(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
 describe("Sidebar", () => {
   it("renders every nav item", () => {
     setup();
-    ["Record", "Review inbox", "Work log", "Tasks", "Lists", "Settings"].forEach((label) =>
+    ["Record", "Review inbox", "Work log", "Tasks", "Notes", "Lists", "Settings"].forEach((label) =>
       expect(screen.getByText(label)).toBeInTheDocument()
     );
   });

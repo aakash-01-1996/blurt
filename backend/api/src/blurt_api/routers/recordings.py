@@ -16,12 +16,12 @@ from blurt_core.db.models import (
 )
 from blurt_core.db.session import get_session
 from blurt_core.queue import enqueue
-from fastapi import APIRouter, HTTPException, UploadFile, status
+from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 
-from blurt_api.auth import CurrentUserId
+from blurt_api.auth import CurrentUserId, create_audio_token, verify_audio_token
 from blurt_api.deps import storage
 
 router = APIRouter(prefix="/api/v1", tags=["recordings"])
@@ -156,17 +156,27 @@ def audio_url(recording_id: uuid.UUID, user_id: CurrentUserId) -> dict[str, str]
             raise HTTPException(status_code=404, detail="Recording not found")
         key = recording.storage_key
 
+    from blurt_core.providers.storage import LocalDiskStorage
+
     url = storage.playback_url(key)
+    # Local streaming goes through our own /audio endpoint, which an <audio> tag
+    # loads with no auth header — so authorize it with a short-lived signed token.
+    # S3 playback URLs are already presigned and need no token.
+    if isinstance(storage, LocalDiskStorage):
+        url = f"{url}?token={create_audio_token(key)}"
     return {"url": url}
 
 
 @router.get("/audio/{key:path}")
-def stream_audio(key: str) -> StreamingResponse:
-    """Stream local audio files (local mode only)."""
+def stream_audio(key: str, token: str = Query(default="")) -> StreamingResponse:
+    """Stream local audio files (local mode only). Authorized by the signed
+    token minted by /audio-url, since an <audio> tag cannot send a Bearer header."""
     from blurt_core.providers.storage import LocalDiskStorage
 
     if not isinstance(storage, LocalDiskStorage):
         raise HTTPException(status_code=404, detail="Not available in S3 mode")
+    if not verify_audio_token(token, key):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid audio token")
     try:
         data = storage.get(key)
     except FileNotFoundError:

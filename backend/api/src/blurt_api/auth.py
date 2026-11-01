@@ -30,6 +30,22 @@ def create_access_token(user_id: uuid.UUID) -> str:
     return str(jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm))
 
 
+def create_audio_token(storage_key: str, ttl_minutes: int = 60) -> str:
+    """Short-lived, key-scoped token so an <audio> tag (which cannot send a
+    Bearer header) can stream a local file the user already proved they own."""
+    expire = datetime.now(UTC) + timedelta(minutes=ttl_minutes)
+    payload = {"key": storage_key, "scope": "audio", "exp": expire}
+    return str(jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm))
+
+
+def verify_audio_token(token: str, storage_key: str) -> bool:
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except JWTError:
+        return False
+    return bool(payload.get("scope") == "audio" and payload.get("key") == storage_key)
+
+
 def _decode_token(token: str) -> uuid.UUID:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])

@@ -40,6 +40,8 @@ export interface Item {
   status: ItemStatus;
   span_text: string;
   route_confidence: number | null;
+  start_s: number | null;
+  end_s: number | null;
   fields: Record<string, string> | null;
   followup_question: string | null;
 }

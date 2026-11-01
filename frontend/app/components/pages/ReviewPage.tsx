@@ -55,7 +55,16 @@ export function ReviewPage({ token, onCountChange }: ReviewPageProps) {
   }, [recordings, itemsMap]);
 
   const items = useMemo(() => (active ? (itemsMap[active.id] ?? []) : []), [active, itemsMap]);
-  const timestamps = useMemo(() => deriveTimestamps(items, active?.duration_s ?? null), [items, active]);
+  // Prefer real segment-derived timestamps from the backend; fall back to the
+  // client-side approximation only for items that lack timing (e.g. old data).
+  const timestamps = useMemo(() => {
+    const derived = deriveTimestamps(items, active?.duration_s ?? null);
+    const out: Record<string, number> = {};
+    for (const it of items) {
+      out[it.id] = it.start_s ?? derived[it.id] ?? 0;
+    }
+    return out;
+  }, [items, active]);
 
   const counts: Record<FilterSection, number> = {
     all: items.length,

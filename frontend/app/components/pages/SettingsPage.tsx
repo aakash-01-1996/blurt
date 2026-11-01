@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PasskeysCard } from "../settings/PasskeysCard";
 
 export function SettingsPage({ token }: { token: string }) {
   const [exporting, setExporting] = useState(false);
@@ -50,6 +51,8 @@ export function SettingsPage({ token }: { token: string }) {
         </button>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
+
+      <PasskeysCard token={token} />
 
       <p className="text-sm text-gray-400 mt-5">
         To delete a recording and everything derived from it, use the trash icon next to it on the

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Logo } from "./Logo";
+import { loginWithPasskey, passkeysSupported } from "../../lib/passkey";
 
 type Mode = "login" | "signup";
 
@@ -28,6 +29,31 @@ export function AuthForm({ mode, onModeChange, onAuth }: AuthFormProps) {
   function switchMode(next: Mode) {
     onModeChange(next);
     setError(null);
+  }
+
+  async function handlePasskey() {
+    setError(null);
+    if (isSignup) {
+      setError("Create your account first, then add a passkey in Settings.");
+      return;
+    }
+    if (!passkeysSupported()) {
+      setError("This browser doesn't support passkeys.");
+      return;
+    }
+    if (!email) {
+      setError("Enter your email, then sign in with your passkey.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const token = await loginWithPasskey(email);
+      onAuth(token);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Passkey sign-in failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -183,8 +209,9 @@ export function AuthForm({ mode, onModeChange, onAuth }: AuthFormProps) {
 
           <button
             type="button"
-            onClick={() => setError("Passkeys aren't set up yet — use your email and password for now.")}
-            className="w-full flex items-center justify-center gap-2.5 text-[15px] font-bold py-3.5 rounded-xl border border-[#E5E5EA] shadow-[0_1px_2px_rgba(0,0,0,0.04)] text-[#1D1D1F] hover:bg-raised transition"
+            onClick={handlePasskey}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2.5 text-[15px] font-bold py-3.5 rounded-xl border border-[#E5E5EA] shadow-[0_1px_2px_rgba(0,0,0,0.04)] text-[#1D1D1F] hover:bg-raised transition disabled:opacity-50"
           >
             <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
               <circle cx="6" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5" />

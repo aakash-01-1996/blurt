@@ -42,7 +42,7 @@ export interface Item {
   route_confidence: number | null;
   start_s: number | null;
   end_s: number | null;
-  fields: Record<string, string> | null;
+  fields: Record<string, string | string[]> | null;
   followup_question: string | null;
 }
 
@@ -65,6 +65,21 @@ export interface Note {
   title: string;
   content: string | null;
   created_at: string;
+}
+
+export interface ListItem {
+  id: string;
+  text: string;
+  checked: boolean;
+  position: number;
+}
+
+export interface List {
+  id: string;
+  item_id: string;
+  title: string;
+  created_at: string;
+  items: ListItem[];
 }
 
 export type Page = "record" | "review" | "work-log" | "tasks" | "notes" | "lists" | "settings";

@@ -12,6 +12,7 @@ from blurt_api.routers.export import router as export_router
 from blurt_api.routers.items import router as items_router
 from blurt_api.routers.lists import router as lists_router
 from blurt_api.routers.notes import router as notes_router
+from blurt_api.routers.passkey import router as passkey_router
 from blurt_api.routers.recordings import router as recordings_router
 from blurt_api.routers.summaries import router as summaries_router
 from blurt_api.routers.tasks import router as tasks_router
@@ -21,6 +22,7 @@ configure_logging()
 
 app = FastAPI(title="Blurt API")
 app.include_router(auth_router)
+app.include_router(passkey_router)
 app.include_router(recordings_router)
 app.include_router(items_router)
 app.include_router(notes_router)

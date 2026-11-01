@@ -50,16 +50,3 @@ flowchart LR
     EX -->|Item rows = pending| REVIEW[Review inbox]
     REVIEW -->|approve| OUT[Work log / Task / Note / List]
 ```
-
-## Consequences
-
-- No extra infrastructure: the queue is just a table, visible in the same DB
-  and backed up with it. Retries, attempts, and `run_after` are columns.
-- Each stage retries and scales independently; the two pools scale on their own
-  resource profiles (audio CPU vs. LLM throughput/cost).
-- `summarize` is a handler but is in **neither** pool's `HANDLED_KINDS`, so in
-  the cluster no worker currently claims summarize jobs. In local mode the
-  single worker has an empty `HANDLED_KINDS` and handles every kind, including
-  summarize. Wiring summarize to a pool is deferred.
-- Throughput is bounded by polling cadence and `WORKER_CONCURRENCY`; this is a
-  queue for a personal-scale workload, not a high-volume broker.

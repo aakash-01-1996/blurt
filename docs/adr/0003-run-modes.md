@@ -30,14 +30,3 @@ Secrets are never committed: local uses `.env` (gitignored); the cluster builds
 `blurt-secrets` at apply time from the operator's keychain via
 `scripts/k8s-secrets.sh`. Only `secret.example.yaml` (empty placeholders) is in
 the repo.
-
-## Consequences
-
-- One code path, two configs — no mode-specific branches in application code;
-  provider choice (storage/STT/LLM) is injected, so swapping is a config change.
-- Local runs with no cloud dependencies or API keys when using the `mlx` +
-  Ollama defaults; the `fake` STT provider exists for tests.
-- No staging: changes go from local straight to the cluster, which puts the
-  weight on CI gates and the eval threshold gate before merge.
-- The cluster assumes a hosted LLM/STT provider is reachable; a provider
-  decommissioning a model is a live risk (hence the weekly eval workflow).

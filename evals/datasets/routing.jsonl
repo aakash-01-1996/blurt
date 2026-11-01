@@ -1,4 +1,4 @@
-# Routing eval cases: span text -> expected section (work_log | task | note | skip)
+# Routing eval cases: span text -> expected section (work_log | task | note | list | skip)
 {"id": "r-wl-1", "text": "I shipped the retry fix in the upload service today.", "expected_section": "work_log"}
 {"id": "r-wl-2", "text": "Fixed three flaky integration tests this afternoon.", "expected_section": "work_log"}
 {"id": "r-wl-3", "text": "Deployed the new auth service to staging.", "expected_section": "work_log"}
@@ -11,6 +11,10 @@
 {"id": "r-nt-2", "text": "Idea: we could cache the user profile to cut latency.", "expected_section": "note"}
 {"id": "r-nt-3", "text": "The team offsite is in Berlin this year.", "expected_section": "note"}
 {"id": "r-nt-4", "text": "Worth remembering that the client prefers email over calls.", "expected_section": "note"}
+{"id": "r-ls-1", "text": "Add milk, eggs, and bread to my shopping list.", "expected_section": "list"}
+{"id": "r-ls-2", "text": "For the trip I need to pack a charger, my passport, and headphones.", "expected_section": "list"}
+{"id": "r-ls-3", "text": "Grocery list: apples, rice, olive oil, and coffee.", "expected_section": "list"}
+{"id": "r-ls-4", "text": "Things to buy for the office: whiteboard markers, sticky notes, and paper towels.", "expected_section": "list"}
 {"id": "r-sk-1", "text": "Um, testing, one two three.", "expected_section": "skip"}
 {"id": "r-sk-2", "text": "Never mind, ignore that.", "expected_section": "skip"}
 {"id": "r-sk-3", "text": "Uh, what else was there.", "expected_section": "skip"}

@@ -2,7 +2,7 @@
 
 from blurt_core.pipeline.parsing import loads_lenient
 
-EXTRACT_PROMPT_VERSION = "1"
+EXTRACT_PROMPT_VERSION = "2"
 
 EXTRACT_SYSTEM_BY_SECTION: dict[str, str] = {
     "work_log": """\
@@ -30,6 +30,14 @@ Extract structured fields from this note voice note.
 Return a JSON object with these keys (omit a key if not mentioned):
   "title":   string — short summary (one sentence)
   "content": string — the full note text, cleaned up
+
+Return ONLY the JSON object, no markdown fences.""",
+    "list": """\
+Extract a list from this voice note.
+
+Return a JSON object with these keys:
+  "title": string — a short name for the list (e.g. "Groceries", "Packing list")
+  "items": array of strings — each distinct item, cleaned up, one per element
 
 Return ONLY the JSON object, no markdown fences.""",
 }

@@ -75,6 +75,7 @@ class User(Base):
     work_log_entries: Mapped[list["WorkLogEntry"]] = relationship(back_populates="user")
     tasks: Mapped[list["Task"]] = relationship(back_populates="user")
     notes: Mapped[list["Note"]] = relationship(back_populates="user")
+    lists: Mapped[list["List"]] = relationship(back_populates="user")
     weekly_summaries: Mapped[list["WeeklySummary"]] = relationship(back_populates="user")
 
 
@@ -143,6 +144,7 @@ class Item(Base):
     )
     task: Mapped["Task | None"] = relationship(back_populates="item", uselist=False)
     note: Mapped["Note | None"] = relationship(back_populates="item", uselist=False)
+    list_: Mapped["List | None"] = relationship(back_populates="item", uselist=False)
     corrections: Mapped[list["Correction"]] = relationship(back_populates="item")
 
     __table_args__ = (Index("ix_items_recording_id", "recording_id"),)
@@ -199,6 +201,39 @@ class Note(Base):
     item: Mapped["Item"] = relationship(back_populates="note")
 
     __table_args__ = (Index("ix_notes_user_id", "user_id"),)
+
+
+class List(Base):
+    __tablename__ = "lists"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.id"), nullable=False, unique=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="lists")
+    item: Mapped["Item"] = relationship(back_populates="list_")
+    items: Mapped[list["ListItem"]] = relationship(
+        back_populates="list", cascade="all, delete-orphan", order_by="ListItem.position"
+    )
+
+    __table_args__ = (Index("ix_lists_user_id", "user_id"),)
+
+
+class ListItem(Base):
+    __tablename__ = "list_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    list_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("lists.id"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    checked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    list: Mapped["List"] = relationship(back_populates="items")
+
+    __table_args__ = (Index("ix_list_items_list_id", "list_id"),)
 
 
 class Correction(Base):

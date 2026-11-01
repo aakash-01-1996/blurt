@@ -91,6 +91,9 @@ describe("AppShell", () => {
     expect(await screen.findByRole("heading", { name: "Tasks" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Lists" }));
-    expect(screen.getByText(/coming soon/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Lists" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Notes" }));
+    expect(await screen.findByRole("heading", { name: "Notes" })).toBeInTheDocument();
   });
 });

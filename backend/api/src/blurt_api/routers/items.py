@@ -6,6 +6,8 @@ from blurt_core.db.models import (
     CorrectionKind,
     Item,
     ItemStatus,
+    List,
+    ListItem,
     Note,
     Recording,
     Task,
@@ -89,6 +91,8 @@ def review_item(item_id: uuid.UUID, body: ReviewRequest, user_id: CurrentUserId)
             _create_task(session, item)
         if body.action == "approve" and item.section == "note":
             _create_note(session, item)
+        if body.action == "approve" and item.section == "list":
+            _create_list(session, item)
 
         session.flush()
         session.expunge(item)
@@ -175,6 +179,31 @@ def _create_note(session: object, item: Item) -> None:
         content=fields.get("content") or item.span_text,
     )
     session.add(note)
+
+
+def _create_list(session: object, item: Item) -> None:
+    from sqlalchemy.orm import Session as SASession
+
+    assert isinstance(session, SASession)
+
+    recording = session.get(Recording, item.recording_id)
+    user_id = recording.user_id if recording else None
+    if user_id is None:
+        return
+
+    fields = item.fields or {}
+
+    raw_items = fields.get("items")
+    raw_items = raw_items if isinstance(raw_items, list) else []
+    texts = [str(x).strip() for x in raw_items if str(x).strip()]
+
+    the_list = List(
+        user_id=user_id,
+        item_id=item.id,
+        title=fields.get("title") or item.span_text,
+    )
+    the_list.items = [ListItem(text=text, position=i) for i, text in enumerate(texts)]
+    session.add(the_list)
 
 
 @router.patch("/items/{item_id}", response_model=ItemOut)

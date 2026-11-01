@@ -26,7 +26,7 @@ adding a separate broker (Redis/RabbitMQ/SQS).
   (comma-separated; empty = handle all kinds). In the cluster this is two
   Deployments:
   - **audio-worker** — `normalize, transcribe`
-  - **llm-worker** — `split, route, extract`
+  - **llm-worker** — `split, route, extract, summarize`
 - Routing is gated: a span routed to `skip`, or below
   `ROUTER_CONFIDENCE_THRESHOLD`, is rejected rather than extracted. Extracted
   items land as `pending` for the user to review and approve.

@@ -29,7 +29,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: HANDLED_KINDS
-              value: "split,route,extract"
+              value: "split,route,extract,summarize"
           resources:
             requests:
               cpu: 100m

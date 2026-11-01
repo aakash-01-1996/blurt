@@ -8,3 +8,6 @@
 {"id": "e-tk-3", "section": "task", "text": "Follow up with the vendor about pricing before Friday.", "expected_fields": {"title": "Follow up with the vendor about pricing"}}
 {"id": "e-nt-1", "section": "note", "text": "The new API rate limit is one hundred requests per minute.", "expected_fields": {"title": "API rate limit", "content": "The new API rate limit is 100 requests per minute."}}
 {"id": "e-nt-2", "section": "note", "text": "Idea: cache the user profile to cut latency on the dashboard.", "expected_fields": {"title": "Cache the user profile"}}
+{"id": "e-ls-1", "section": "list", "text": "Add milk, eggs, and bread to my shopping list.", "expected_fields": {"title": "Shopping list", "items": ["Milk", "Eggs", "Bread"]}}
+{"id": "e-ls-2", "section": "list", "text": "For the trip I need to pack a charger, my passport, and headphones.", "expected_fields": {"title": "Packing list", "items": ["Charger", "Passport", "Headphones"]}}
+{"id": "e-ls-3", "section": "list", "text": "Grocery list: apples, rice, olive oil, and coffee.", "expected_fields": {"title": "Groceries", "items": ["Apples", "Rice", "Olive oil", "Coffee"]}}

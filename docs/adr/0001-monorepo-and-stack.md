@@ -1,7 +1,6 @@
 # ADR 0001: Monorepo and stack choices
 
 **Status:** Accepted
-**Date:** 2026-10-29
 
 ## Context
 

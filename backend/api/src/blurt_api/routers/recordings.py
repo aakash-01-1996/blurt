@@ -5,6 +5,9 @@ from blurt_core.config import settings
 from blurt_core.db.models import (
     Correction,
     Item,
+    List,
+    ListItem,
+    Note,
     Recording,
     RecordingStatus,
     Task,
@@ -128,6 +131,13 @@ def delete_recording(recording_id: uuid.UUID, user_id: CurrentUserId) -> None:
             session.execute(delete(Correction).where(Correction.item_id.in_(item_ids)))
             session.execute(delete(Task).where(Task.item_id.in_(item_ids)))
             session.execute(delete(WorkLogEntry).where(WorkLogEntry.item_id.in_(item_ids)))
+            session.execute(delete(Note).where(Note.item_id.in_(item_ids)))
+            list_ids = list(
+                session.execute(select(List.id).where(List.item_id.in_(item_ids))).scalars()
+            )
+            if list_ids:
+                session.execute(delete(ListItem).where(ListItem.list_id.in_(list_ids)))
+                session.execute(delete(List).where(List.id.in_(list_ids)))
         session.execute(delete(Item).where(Item.recording_id == recording_id))
         session.execute(delete(Transcript).where(Transcript.recording_id == recording_id))
         session.delete(recording)

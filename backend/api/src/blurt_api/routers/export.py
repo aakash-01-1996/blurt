@@ -3,6 +3,8 @@ from typing import Any
 
 from blurt_core.db.models import (
     Item,
+    List,
+    Note,
     Recording,
     Task,
     Transcript,
@@ -12,6 +14,7 @@ from blurt_core.db.models import (
 from blurt_core.db.session import get_session
 from fastapi import APIRouter
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from blurt_api.auth import CurrentUserId
 
@@ -73,6 +76,29 @@ def _work_log(w: WorkLogEntry) -> dict[str, Any]:
     }
 
 
+def _note(n: Note) -> dict[str, Any]:
+    return {
+        "id": str(n.id),
+        "item_id": str(n.item_id),
+        "title": n.title,
+        "content": n.content,
+        "created_at": n.created_at.isoformat() if n.created_at else None,
+    }
+
+
+def _list(lst: List) -> dict[str, Any]:
+    return {
+        "id": str(lst.id),
+        "item_id": str(lst.item_id),
+        "title": lst.title,
+        "created_at": lst.created_at.isoformat() if lst.created_at else None,
+        "items": [
+            {"id": str(it.id), "text": it.text, "checked": it.checked, "position": it.position}
+            for it in lst.items
+        ],
+    }
+
+
 def _summary(s: WeeklySummary) -> dict[str, Any]:
     return {
         "id": str(s.id),
@@ -105,6 +131,12 @@ def export_data(user_id: CurrentUserId) -> dict[str, Any]:
             else []
         )
         tasks = list(session.execute(select(Task).where(Task.user_id == user_id)).scalars())
+        notes = list(session.execute(select(Note).where(Note.user_id == user_id)).scalars())
+        lists = list(
+            session.execute(
+                select(List).where(List.user_id == user_id).options(selectinload(List.items))
+            ).scalars()
+        )
         work_log = list(
             session.execute(select(WorkLogEntry).where(WorkLogEntry.user_id == user_id)).scalars()
         )
@@ -118,6 +150,8 @@ def export_data(user_id: CurrentUserId) -> dict[str, Any]:
             "transcripts": [_transcript(t) for t in transcripts],
             "items": [_item(i) for i in items],
             "tasks": [_task(t) for t in tasks],
+            "notes": [_note(n) for n in notes],
+            "lists": [_list(lst) for lst in lists],
             "work_log_entries": [_work_log(w) for w in work_log],
             "summaries": [_summary(s) for s in summaries],
         }

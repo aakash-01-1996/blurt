@@ -74,6 +74,7 @@ class User(Base):
     recordings: Mapped[list["Recording"]] = relationship(back_populates="user")
     work_log_entries: Mapped[list["WorkLogEntry"]] = relationship(back_populates="user")
     tasks: Mapped[list["Task"]] = relationship(back_populates="user")
+    notes: Mapped[list["Note"]] = relationship(back_populates="user")
     weekly_summaries: Mapped[list["WeeklySummary"]] = relationship(back_populates="user")
 
 
@@ -141,6 +142,7 @@ class Item(Base):
         back_populates="item", uselist=False
     )
     task: Mapped["Task | None"] = relationship(back_populates="item", uselist=False)
+    note: Mapped["Note | None"] = relationship(back_populates="item", uselist=False)
     corrections: Mapped[list["Correction"]] = relationship(back_populates="item")
 
     __table_args__ = (Index("ix_items_recording_id", "recording_id"),)
@@ -181,6 +183,22 @@ class Task(Base):
     item: Mapped["Item"] = relationship(back_populates="task")
 
     __table_args__ = (Index("ix_tasks_user_id", "user_id"),)
+
+
+class Note(Base):
+    __tablename__ = "notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.id"), nullable=False, unique=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="notes")
+    item: Mapped["Item"] = relationship(back_populates="note")
+
+    __table_args__ = (Index("ix_notes_user_id", "user_id"),)
 
 
 class Correction(Base):
